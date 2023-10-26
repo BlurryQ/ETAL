@@ -1,0 +1,55 @@
+local bDebugPrinting = false;	//  debug printing is a yes :)
+//-------------------------------------------------------------------------------------------------------------------------------------------//
+dofile("etal\\lib\\keys.moc"); // Load Keys from lib (auto crate key)
+
+local nSTS = 30 //Script key number
+local pKey = 12022 //PLU number
+
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+
+ICR_SetLocalUserData("GLASSES",pKey,true)
+
+local sKey = CheckForKey( { NAME = "EMPTY GLASSES" , MATCHNAME = true, FILE = 53, KEYTYPE = 110, SCRIPTNUMBER = nSTS, MATCHVALUE = true} ); //Create STS key
+ICR_SetLocalUserData("STSKEY",sKey) // Save status key record number locally
+
+local mKey = CheckForKey( { NAME = "X" , MATCHNAME = true, FILE = 53, KEYTYPE = 73, MATCHVALUE = true} ); //Create STS key
+ICR_SetLocalUserData("MULTIPLY",mKey) // Save status key record number locally
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------//
+
+function OnRunScriptKeyPress(nFile, nRecord, nNumber, nValue, nFlag)
+	{
+		if (nNumber == nSTS)
+		{
+			local mKey = ICR_GetLocalUserData("MULTIPLY")// get multiply record number
+			local nPLU = ICR_GetLocalUserData("GLASSES")// get PLU record number
+			local nInput = ICR_GetNumberDialog("How many glasses?", 0, false); //Enter amount of glasses required
+			ICR_SetInput(nInput)
+			ICR_KeyPress(53, mKey) //Press multiply key
+			ICR_KeyPress(1, nPLU) //Press Empty Glass
+		}
+	}
+	
+//-------------------------------------------------------------------------------------------------------------------------------------------//
+	
+function OnEnterPGMMenu(nSub) // When entering PGM 3
+	{
+		ICR_PurgeProgramSettings(); // Clear settings and repull data
+		switch(nSub)
+			{
+				case 0:
+					ICR_AdvertiseProgramHeading("Empty Glasses Script"); // Heading
+					local sKey = ICR_AdvertiseProgramSetting("Status key number required on keyboard", "STSKEY");
+					ICR_AdvertiseProgramSetting("Empty Glasses PLU", "GLASSES");
+					ICR_ProgramItem_SetReadOnly(sKey); // Show status key record number as read only
+					break;
+				default:
+					break;
+			}
+	}

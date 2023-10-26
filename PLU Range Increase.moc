@@ -1,0 +1,1446 @@
+﻿local bDebugPrinting = true;	// Set this false to disable all the debug printing in the output file
+
+dofile("etal\\lib\\keys.moc"); // Load Keys from lib (auto crate key)
+
+/*----------------------------------Window Information----------------------------------*/
+local nWindowID = 0; //No ID for Window
+local nWindowDimensions = 0; //No dimensions for Window
+
+enum EVENT {DOWN = 0, UP = 1, MOVE = 2}; 
+local bSelect = 0; // Set selected box to 0
+local bLocation = {}; // Create empty table
+/*--------------------------------END Window Information--------------------------------*/
+
+local sNumber = 159
+
+local cBlack = 0x000000 // Black colour
+local cWhite = 0xFFFFFF // White colour
+local cRed = 0xff0000 // Red colour
+local cGreen = 0x00ff00 // Green Colour
+local cGrey = 0x808080 // Grey Colour
+local cBlue = 0x99cfe0 //light blue
+
+local dRay = []; //create an empty array for departments
+local gRay = []; //create an empty array for group
+
+function OnInit()
+	{
+		ICR_EnableDebugLog(true);	
+		ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+		ICR_SetFeature("CONSOLE",bDebugPrinting);
+		ICR_SetFeature("AUTORESTART",bDebugPrinting);
+		
+		nWindowID = ICR_SalesModeWindow_Add("window.xml", true); //Adding window.xml to script - true = Home Mode
+		nWindowDimensions = ICR_GetWindowDimensions(nWindowID); //get dimensions from the xml
+		local nWindowEnable = ICR_Window_Enable (nWindowID,false); //Turn window off
+		
+		local rPLU = CheckForKey( { NAME = "PRICE RANGE INCREASE" , MATCHNAME = true, FILE = 53, KEYTYPE = 110, SCRIPTNUMBER = sNumber, MATCHVALUE = true} ); //Create STS key
+		print("Price increase range STS key is record "+rPLU)
+		
+		ResetData() //custom function
+	}
+
+/*----------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+/*function AfterSignOn(nClerk)
+	{
+		ICR_StartTimer(100) //Start timer (1000 = second)
+	}*/
+
+/*----------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function OnTimer(nTimerID, nSystemTime)
+	{
+		local nClerk = ICR_GetCurrentClerk() //Get current clerk info
+		local nWindow = ICR_GetLocalUserData("WINDOW") //set window off
+		print("clerk == " + nClerk + " and window is " + nWindow)
+		if(nClerk == 0 && nWindow == true) //If no clerk and window open
+			{
+				ICR_Window_Enable(nWindowID, false); //close window
+				ICR_RedrawScreen(); //Redraw screen 
+				ICR_StopTimer(nTimerID) //stop timer
+				ResetData()
+			}
+		if(nClerk == 0 && nWindow == false)
+			{
+				ICR_StopTimer(nTimerID) //stop timer
+			}
+	}
+
+/*----------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+
+function OnRunScriptKeyPress (nFile, nRecord, nNumber, nValue, nFlag)
+	{
+		if(nNumber == sNumber) //if our script key
+			{
+				ICR_Window_Enable (nWindowID,true) // Open window
+				ICR_RedrawScreen(); // Redraw window
+
+			}
+	}
+
+/*----------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function PaintWindow() 
+	{
+		ICR_SetLocalUserData("WINDOW",true) //set window off
+		
+		local bFont = ICR_CreateFont("Arial", 30, true,false,true); // Setting font
+		ICR_SelectFont(bFont) // Selecting font
+		ICR_SetText_Colour(cBlack); // Set text colour = black
+		ICR_SetText_VAlign(1); // Centre alignment
+		ICR_SetText_HAlign(1); // Centre alignment	
+		
+		ICR_DrawFrame(307, 437, 276, 166, 3, cBlack) //draw frame
+		ICR_DrawBox(310, 440, 270, 160, cBlue); //draw box
+		ICR_DrawText(300, 20, "PLU Range Price"); // Draw title
+		ICR_DrawText(385, 460, "CCM EPoS"); // Draw text
+		
+		local tFont = ICR_CreateFont("Arial", 30); // Setting font
+		ICR_SelectFont(tFont); // Selecting font
+		ICR_SetText_Colour(cBlack); // Set text colour = black	
+		
+		ICR_DrawText(320, 480, "452 Holdenhurst Road"); // Draw text
+		ICR_DrawText(320, 510, "Bournemouth"); // Draw text
+		ICR_DrawText(320, 540, "BH8 9AF"); // Draw text
+		ICR_DrawText(320, 570, "01202 302666"); // Draw text
+		
+		ICR_DrawText(20, 60, "Percentage (%)"); // Draw text
+		ICR_DrawText(320, 60, "Amount (£)"); // Draw text
+		
+		ICR_DrawText(20, 110, "Price Increase"); // Draw text
+		ICR_DrawText(320, 110, "Price Decrease"); // Draw text
+		
+		ICR_DrawText(20, 210, "From PLU"); // Draw text
+		ICR_DrawText(260, 210, "to PLU"); // Draw text
+		
+
+		ICR_DrawText(20, 260, "Filter by department"); // Draw text
+		ICR_DrawText(20, 310, "Filter by group"); // Draw text
+		
+		ICR_DrawText(20, 360, "Include 1st @ Price?"); // Draw text
+		ICR_DrawText(20, 410, "Include 2nd @ Price?"); // Draw text
+		ICR_DrawText(20, 460, "Include 3rd @ Price?"); // Draw text
+		ICR_DrawText(20, 510, "Include 4th @ Price?"); // Draw text
+		
+		ICR_DrawText(20, 560, "Round up to 5p?"); // Draw text
+		ICR_DrawText(20, 610, "Round up to 10p?"); // Draw text
+		
+		local nPercent = ICR_GetLocalUserData("PERCENT")  //percent to increase
+		local aValue = ICR_GetLocalUserData("VALUE") //value to increase
+		local aPLU = ICR_GetLocalUserData("APLU") // PLU from
+		local zPLU = ICR_GetLocalUserData("ZPLU") //PLU to
+		local aPrice = ICR_GetLocalUserData("1PRICE") //1st price flag
+		local bPrice = ICR_GetLocalUserData("2PRICE") //2nd price flag
+		local cPrice = ICR_GetLocalUserData("3PRICE") //3rd price flag
+		local dPrice = ICR_GetLocalUserData("4PRICE") //4th price flag
+		
+		local fiveP = ICR_GetLocalUserData("5PENCE") //5p rounding flag
+		local tenP = ICR_GetLocalUserData("10PENCE") //10p rounding flag
+		
+		local nPerc = ICR_GetLocalUserData("NPERC") //percentage flag
+		local nPrice = ICR_GetLocalUserData("NPRICE") //amount flag
+		
+		local nDept = ICR_GetLocalUserData("DEPNAME") //get department name
+		local nGroup = ICR_GetLocalUserData("GRPNAME") //get department name
+		
+		local pInc = ICR_GetLocalUserData("INCREASE") //get increase flag
+		local pDec = ICR_GetLocalUserData("DECREASE") //get decrease flag
+		
+		if(nPerc == true) //if percentage flag on
+			{
+				if(pInc == true)
+					{
+						ICR_DrawText(20, 160, "Increase prices by"); // Draw text
+						ICR_DrawText(330, 160, "%"); // Draw text
+					}
+				if(pDec == true)
+					{
+						ICR_DrawText(20, 160, "Decrease prices by"); // Draw text
+						ICR_DrawText(330, 160, "%"); // Draw text
+					}
+		
+				ICR_SetText_Colour(cWhite); // Set text colour = white
+				ICR_SetText_VAlign(1); // Centre alignment
+				ICR_SetText_HAlign(1); // Centre alignment	
+				ICR_DrawBox(250, 160, 70, 30, cBlack); // Draw a black box
+				ICR_DrawText(285, 175, nPercent); // Show value in box
+		
+				if(bSelect == 1) // If this box is selected
+					{
+						ICR_DrawFrame(250, 160, 70, 30, 3, cRed); // When selected draw 3px red frame
+					}
+				bLocation[1] <- {"LEFT": 250, "TOP": 160, "BOTTOM": 190, "RIGHT": 320}; // Save location of box
+			}
+			
+		if(nPrice == true) //if amount flag on
+			{
+				if(pInc == true)
+					{
+						ICR_DrawText(20, 160, "Increase prices by"); // Draw title
+						ICR_DrawText(330, 160, "p"); // Draw text
+					}
+				if(pDec == true)
+					{
+						ICR_DrawText(20, 160, "Decrease prices by"); // Draw title
+						ICR_DrawText(330, 160, "p"); // Draw text
+					}
+			
+				ICR_SetText_Colour(cWhite); // Set text colour = white
+				ICR_SetText_VAlign(1); // Centre alignment
+				ICR_SetText_HAlign(1); // Centre alignment	
+				ICR_DrawBox(250, 160, 70, 30, cBlack); // Draw a black box
+				ICR_DrawText(285, 175, aValue); // Show value in box
+		
+				if(bSelect == 1) // If this box is selected
+					{
+						ICR_DrawFrame(250, 160, 70, 30, 3, cRed); // When selected draw 3px red frame
+					}
+				bLocation[1] <- {"LEFT": 250, "TOP": 160, "BOTTOM": 190, "RIGHT": 320}; // Save location of box
+			}		
+			
+		ICR_DrawBox(150, 210, 100, 30, cBlack); // Draw a black box
+		ICR_DrawText(200, 225, aPLU); // Show value in box
+		if(bSelect == 2) // If this box is selected
+			{
+				ICR_DrawFrame(150, 210, 100, 30, 3, cRed); // When selected draw 3px red frame
+			}
+		bLocation[2] <- {"LEFT": 150, "TOP": 210, "BOTTOM": 240, "RIGHT": 250}; // Save location of box
+		
+		ICR_DrawBox(350, 210, 100, 30, cBlack); // Draw a black box
+		ICR_DrawText(400, 225, zPLU); // Show value in box
+		if(bSelect == 3) // If this box is selected
+			{
+				ICR_DrawFrame(350, 210, 100, 30, 3, cRed); // When selected draw 3px red frame
+			}
+		bLocation[3] <- {"LEFT": 350, "TOP": 210, "BOTTOM": 240, "RIGHT": 450}; // Save location of box
+		
+		if(aPrice == true) //if 1st @ price is on
+			{
+				ICR_DrawBox(270, 365, 20, 20, cBlack); // Draw a black box
+				ICR_DrawText(280, 375, "X"); // Show value in box
+				if(bSelect == 4) // If this box is selected
+					{
+						ICR_DrawFrame(270, 365, 20, 20, 3, cRed); // When selected draw 3px red frame
+					}
+				bLocation[4] <- {"LEFT": 270, "TOP": 365, "BOTTOM": 385, "RIGHT": 290}; // Save location of box	
+			}
+		else
+			{
+				ICR_DrawBox(270, 365, 20, 20, cBlack); // Draw a black box
+				if(bSelect == 4) // If this box is selected
+					{
+						ICR_DrawFrame(270, 365, 20, 20, 3, cRed); // When selected draw 3px red frame
+					}
+				bLocation[4] <- {"LEFT": 270, "TOP": 365, "BOTTOM": 385, "RIGHT": 290}; // Save location of box	
+			}
+		
+		if(bPrice == true) //if 2nd @ price is on
+			{
+				ICR_DrawBox(270, 415, 20, 20, cBlack); // Draw a black box
+				ICR_DrawText(280, 425, "X"); // Show value in box
+				if(bSelect == 5) // If this box is selected
+					{
+						ICR_DrawFrame(270, 415, 20, 20, 3, cRed); // When selected draw 3px red frame
+					}
+				bLocation[5] <- {"LEFT": 270, "TOP": 415, "BOTTOM": 435, "RIGHT": 290}; // Save location of box	
+			}
+		else
+			{
+				ICR_DrawBox(270, 415, 20, 20, cBlack); // Draw a black box
+				if(bSelect == 5) // If this box is selected
+					{
+						ICR_DrawFrame(270, 415, 20, 20, 3, cRed); // When selected draw 3px red frame
+					}
+				bLocation[5] <- {"LEFT": 270, "TOP": 415, "BOTTOM": 435, "RIGHT": 290}; // Save location of box	
+			}
+		
+		if(cPrice == true) //if 3rd @ price is on
+			{
+				ICR_DrawBox(270, 465, 20, 20, cBlack); // Draw a black box
+				ICR_DrawText(280, 475, "X"); // Show value in box
+				if(bSelect == 6) // If this box is selected
+					{
+						ICR_DrawFrame(270, 465, 20, 20, 3, cRed); // When selected draw 3px red frame
+					}
+				bLocation[6] <- {"LEFT": 270, "TOP": 465, "BOTTOM": 485, "RIGHT": 290}; // Save location of box	
+			}
+		else
+			{
+				ICR_DrawBox(270, 465, 20, 20, cBlack); // Draw a black box
+				if(bSelect == 6) // If this box is selected
+					{
+						ICR_DrawFrame(270, 465, 20, 20, 3, cRed); // When selected draw 3px red frame
+					}
+				bLocation[6] <- {"LEFT": 270, "TOP": 465, "BOTTOM": 485, "RIGHT": 290}; // Save location of box	
+			}
+			
+		if(dPrice == true) //if 4th @ price is on
+			{
+				ICR_DrawBox(270, 515, 20, 20, cBlack); // Draw a black box
+				ICR_DrawText(280, 525, "X"); // Show value in box
+				if(bSelect == 7) // If this box is selected
+					{
+						ICR_DrawFrame(270, 515, 20, 20, 3, cRed); // When selected draw 3px red frame
+					}
+				bLocation[7] <- {"LEFT": 270, "TOP": 515, "BOTTOM": 535, "RIGHT": 290}; // Save location of box	
+			}
+		else
+			{
+				ICR_DrawBox(270, 515, 20, 20, cBlack); // Draw a black box
+				if(bSelect == 7) // If this box is selected
+					{
+						ICR_DrawFrame(270, 515, 20, 20, 3, cRed); // When selected draw 3px red frame
+					}
+				bLocation[7] <- {"LEFT": 270, "TOP": 515, "BOTTOM": 535, "RIGHT": 290}; // Save location of box	
+			}
+			
+		if(nPerc == true) //if percentage flag is on
+			{
+				ICR_DrawBox(200, 65, 20, 20, cBlack); // Draw a black box
+				ICR_DrawText(210, 75, "X"); // Show value in box
+				if(bSelect == 8) // If this box is selected
+					{
+						ICR_DrawFrame(200, 65, 20, 20, 3, cRed); // When selected draw 3px red frame
+					}
+				bLocation[8] <- {"LEFT": 200, "TOP": 65, "BOTTOM": 85, "RIGHT": 220}; // Save location of box	
+			}
+		else
+			{
+				ICR_DrawBox(200, 65, 20, 20, cBlack); // Draw a black box
+				if(bSelect == 8) // If this box is selected
+					{
+						ICR_DrawFrame(200, 65, 20, 20, 3, cRed); // When selected draw 3px red frame
+					}
+				bLocation[8] <- {"LEFT": 200, "TOP": 65, "BOTTOM": 85, "RIGHT": 220}; // Save location of box	
+			}
+			
+		if(nPrice == true) //if amount flag is on
+			{
+				ICR_DrawBox(450, 65, 20, 20, cBlack); // Draw a black box
+				ICR_DrawText(460, 75, "X"); // Show value in box
+				if(bSelect == 9) // If this box is selected
+					{
+						ICR_DrawFrame(450, 65, 20, 20, 3, cRed); // When selected draw 3px red frame
+					}
+				bLocation[9] <- {"LEFT": 450, "TOP": 65, "BOTTOM": 85, "RIGHT": 470}; // Save location of box	
+			}
+		else
+			{
+				ICR_DrawBox(450, 65, 20, 20, cBlack); // Draw a black box
+				if(bSelect == 9) // If this box is selected
+					{
+						ICR_DrawFrame(450, 65, 20, 20, 3, cRed); // When selected draw 3px red frame
+					}
+				bLocation[9] <- {"LEFT": 450, "TOP": 65, "BOTTOM": 85, "RIGHT": 470}; // Save location of box	
+			}
+			
+		if(pInc == true) //if amount flag is on
+			{
+				ICR_DrawBox(200, 115, 20, 20, cBlack); // Draw a black box
+				ICR_DrawText(210, 125, "X"); // Show value in box
+				if(bSelect == 14) // If this box is selected
+					{
+						ICR_DrawFrame(200, 115, 20, 20, 3, cRed); // When selected draw 3px red frame
+					}
+				bLocation[14] <- {"LEFT": 200, "TOP": 115, "BOTTOM": 135, "RIGHT": 220}; // Save location of box
+			}
+		else
+			{
+				ICR_DrawBox(200, 115, 20, 20, cBlack); // Draw a black box
+				if(bSelect == 14) // If this box is selected
+					{
+						ICR_DrawFrame(200, 115, 20, 20, 3, cRed); // When selected draw 3px red frame
+					}
+				bLocation[14] <- {"LEFT": 200, "TOP": 115, "BOTTOM": 135, "RIGHT": 220}; // Save location of box
+			}
+			
+		if(pDec == true) //if amount flag is on
+			{
+				ICR_DrawBox(500, 115, 20, 20, cBlack); // Draw a black box
+				ICR_DrawText(510, 125, "X"); // Show value in box
+				if(bSelect == 15) // If this box is selected
+					{
+						ICR_DrawFrame(500, 115, 20, 20, 3, cRed); // When selected draw 3px red frame
+					}
+				bLocation[15] <- {"LEFT": 500, "TOP": 115, "BOTTOM": 135, "RIGHT": 520}; // Save location of box
+			}
+		else
+			{
+				ICR_DrawBox(500, 115, 20, 20, cBlack); // Draw a black box
+				if(bSelect == 15) // If this box is selected
+					{
+						ICR_DrawFrame(500, 115, 20, 20, 3, cRed); // When selected draw 3px red frame
+					}
+				bLocation[15] <- {"LEFT": 500, "TOP": 115, "BOTTOM": 135, "RIGHT": 520}; // Save location of box
+			}
+		
+		ICR_DrawBox(260, 260, 200, 30, cBlack); // Draw a black box
+		ICR_DrawText(360, 275, nDept); // Show value in box
+		if(bSelect == 10) // If this box is selected
+			{
+				ICR_DrawFrame(260, 260, 200, 30, 3, cRed); // When selected draw 3px red frame
+			}
+		bLocation[10] <- {"LEFT": 260, "TOP": 260, "BOTTOM": 290, "RIGHT": 460}; // Save location of box	
+		
+		ICR_DrawBox(190, 310, 200, 30, cBlack); // Draw a black box
+		ICR_DrawText(290, 325, nGroup); // Show value in box
+		if(bSelect == 11) // If this box is selected
+			{
+				ICR_DrawFrame(190, 310, 200, 30, 3, cRed); // When selected draw 3px red frame
+			}
+		bLocation[11] <- {"LEFT": 190, "TOP": 310, "BOTTOM": 340, "RIGHT": 390}; // Save location of box			
+
+		if(fiveP == true) //if rounding up to 5p flag is on
+			{
+				ICR_DrawBox(230, 565, 20, 20, cBlack); // Draw a black box
+				ICR_DrawText(240, 575, "X"); // Show value in box
+				if(bSelect == 12) // If this box is selected
+					{
+						ICR_DrawFrame(230, 565, 20, 20, 3, cRed); // When selected draw 3px red frame
+					}
+				bLocation[12] <- {"LEFT": 230, "TOP": 565, "BOTTOM": 585, "RIGHT": 250}; // Save location of box	
+			}
+		else
+			{
+				ICR_DrawBox(230, 565, 20, 20, cBlack); // Draw a black box
+				if(bSelect == 12) // If this box is selected
+					{
+						ICR_DrawFrame(230, 565, 20, 20, 3, cRed); // When selected draw 3px red frame
+					}
+				bLocation[12] <- {"LEFT": 230, "TOP": 565, "BOTTOM": 585, "RIGHT": 250}; // Save location of box	
+			}
+
+		if(tenP == true) //if rounding up to 10p flag is on
+			{
+				ICR_DrawBox(230, 615, 20, 20, cBlack); // Draw a black box
+				ICR_DrawText(240, 625, "X"); // Show value in box
+				if(bSelect == 13) // If this box is selected
+					{
+						ICR_DrawFrame(230, 615, 20, 20, 3, cRed); // When selected draw 3px red frame
+					}
+				bLocation[13] <- {"LEFT": 230, "TOP": 615, "BOTTOM": 635, "RIGHT": 250}; // Save location of box	
+			}
+		else
+			{
+				ICR_DrawBox(230, 615, 20, 20, cBlack); // Draw a black box
+				if(bSelect == 13) // If this box is selected
+					{
+						ICR_DrawFrame(230, 615, 20, 20, 3, cRed); // When selected draw 3px red frame
+					}
+				bLocation[13] <- {"LEFT": 230, "TOP": 615, "BOTTOM": 635, "RIGHT": 250}; // Save location of box
+			}
+
+		local bFont = ICR_CreateFont("Arial", 25, true,false,true); // Setting font
+		ICR_SelectFont(bFont) // Selecting font
+		ICR_SetText_Colour(cBlack); // Set text colour = black
+		ICR_SetText_VAlign(1); // Centre alignment
+		ICR_SetText_HAlign(1); // Centre alignment	
+			
+		ICR_SelectFont(bFont) // Selecting font
+		ICR_DrawBox(220,  665, 100, 30, cGreen); // Draw a green box
+		ICR_DrawText(270, 680, "CONFIRM") // Draw CONFIRM
+		if(bSelect == 25) // If this box is selected
+					{
+						ICR_DrawFrame(220, 665, 100, 30, 3, cBlack); // When selected draw 3px black frame
+					}
+						bLocation[25] <- {"LEFT": 220, "TOP": 665, "BOTTOM": 695, "RIGHT": 320}; // Save location of box
+
+	
+		ICR_DrawBox(340, 665, 100, 30, cRed); // Draw a red box
+		ICR_DrawText(390, 680, "CANCEL") // Draw CANCEL
+		if(bSelect == 26) // If this box is selected
+					{
+						ICR_DrawFrame(340,665,100,30, cBlack); // When selected draw 3px black frame
+					}
+				bLocation[26] <- {"LEFT": 340, "TOP": 665, "BOTTOM": 695, "RIGHT": 440}; // Save location of box
+	}
+
+/*----------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function OnWindowPaint(nID) //launched above window I want created
+	{
+	  if(nID == nWindowID) //another function call from ICRTouch askng what needs to happen to make our window redraw
+		  {
+			PaintWindow(); //run function above
+		  }
+	}
+
+/*----------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+	function AfterModeChange(nFrom, nTo)
+	{
+		if(nTo == 7) //If changed to something other than home
+			{
+				ICR_Window_Enable (nWindowID,false) //open window
+				ICR_RedrawWindow(21, nWindowID); //Reload Window
+				ResetData()
+				
+			}
+		else
+			{
+				ICR_Window_Enable (nWindowID,false) //close window
+				ResetData()
+			}
+	}
+	
+/*-------------------------------------------------------------------------------------------------------*/
+
+function DetectKeyPressed(nX, nY)
+{
+	// Checking through our bLocation table.
+	/* format:
+	   {[0] = {LEFT = 0, TOP = 0, RIGHT = 0, BOTTOM = 0},
+	    [1] = {LEFT = 0, TOP = 0, RIGHT = 0, BOTTOM = 0}}
+	*/
+	// Using the foreach loop we go through our 2 level table.
+	// In this case:
+	// idx = the slot number
+	// val = the value table attached to the slot.
+	// By calling val.LEFT we can get the LEFT value of the current idx.
+	// this will go through the entire loop until it finds a match.
+	// When it finds a match, it assigns the value to a global variable (bSelect), then breaks out.
+	// If no match is found, it leaves bSelect as 0, indicating that no boxes have been selected.
+	foreach(idx, val in bLocation)
+	{
+		// Checking the coordinates are within the constraints of a "box".
+		if((nX >= val.LEFT && nX <= val.RIGHT) && (nY >= val.TOP && nY <= val.BOTTOM))
+		{
+			// This "box" index matches, assign the current index to bSelect.
+			bSelect = idx;
+			// We're done here, break out of the loop.
+			// Do not continue with the remaining values.
+			break;
+		}
+		// No match has been found on this iteration, assigning 0 to bSelect.
+		// If no match is found once the loop ends, it will leave with 0 as it's value.
+		else bSelect = 0;
+	}
+}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function OnMouseEvent(nWindowID, nEvent, nX, nY)
+	{
+		if(nWindowID == nWindowID) // If float window
+			{
+				switch(nEvent) // Options for what happens
+					{				
+						case EVENT.DOWN: // Mouse pressed down
+										break; //stop
+						case EVENT.UP: // Mouse released
+										DetectKeyPressed(nX, nY); // Track mouse location
+										switch(bSelect)
+											{
+												case 0: // Nothing selected
+														break; // Stop
+												case 1: // increase percentage selected
+														local nPercent = ICR_GetLocalUserData("PERCENT") //percent to increase
+														local nValue = ICR_GetLocalUserData("VALUE") //value to increase
+														local nPerc = ICR_GetLocalUserData("NPERC") //get percentage flag
+														local nPrice = ICR_GetLocalUserData("NPRICE") //get amount flag
+														
+														if(nPerc == true) //if percent
+															{
+																local nPercent = ICR_GetNumberDialog("Percentage increase by (%)?",nPercent)
+																print("Percentage increase by " + nPercent + "%")
+																ICR_SetLocalUserData("PERCENT",nPercent)
+															}
+														if (nPrice == true) //if amount
+															{
+																local aValue = ICR_GetNumberDialog("Value increase by (pence)?",nValue)
+																print("Value increase by " + aValue + "%")
+																ICR_SetLocalUserData("VALUE",aValue)
+															}
+														ICR_RedrawScreen();
+														break; // Stop
+												case 2: // 1st PLU selected
+														local nPGM = ICR_GetPGMData(399,1); //Get PGM Data
+														local pMax = nPGM.SIZE //Get PLU Maximim file size
+														print("PLU file size is "+pMax)
+														local aPLU = ICR_GetLocalUserData("APLU")
+														local aPLU = ICR_GetNumberDialog("From PLU",aPLU)
+														print("Range PLU starting from " + aPLU )
+														ICR_SetLocalUserData("APLU",aPLU)
+														if(aPLU >= pMax) //if PLU higher than PLU file size limit
+															{
+																ICR_SetLocalUserData("APLU",(pMax-1) ) //set to 1 below file size limit
+															}
+														ICR_RedrawScreen();
+														break; // Stop
+												case 3: // last PLU selected
+														local nPGM = ICR_GetPGMData(399,1); //Get PGM Data
+														local pMax = nPGM.SIZE //Get PLU Maximim file size
+														print("PLU file size is "+pMax)
+														local zPLU = ICR_GetLocalUserData("ZPLU")
+														local zPLU = ICR_GetNumberDialog("To PLU",zPLU)
+														print("Range PLU starting from " + zPLU )
+														ICR_SetLocalUserData("ZPLU",zPLU) //if PLU higher than PLU file size limit
+														if(zPLU >= pMax)
+															{
+																ICR_SetLocalUserData("ZPLU",(pMax-1) ) //set to 1 below file size limit
+															}
+														ICR_RedrawScreen();
+														break; // Stop
+												case 4: // 1st @ price
+														local aPrice = ICR_GetLocalUserData("1PRICE")
+														if (aPrice == true) //if on
+															{
+																ICR_SetLocalUserData("1PRICE",false) //turn off
+															}
+														else
+															{
+																ICR_SetLocalUserData("1PRICE",true) //otherwise turn on
+															}
+														ICR_RedrawScreen();
+														break;
+												case 5: // 2nd @ price
+														local bPrice = ICR_GetLocalUserData("2PRICE")
+														if (bPrice == true) //if on
+															{
+																ICR_SetLocalUserData("2PRICE",false) //turn off
+															}
+														else
+															{
+																ICR_SetLocalUserData("2PRICE",true) //otherwise turn on
+															}
+														ICR_RedrawScreen();
+														break;
+												case 6: // 3rd @ price	
+														local cPrice = ICR_GetLocalUserData("3PRICE")
+														if (cPrice == true) //if on
+															{
+																ICR_SetLocalUserData("3PRICE",false) //turn off
+															}
+														else
+															{
+																ICR_SetLocalUserData("3PRICE",true) //otherwise turn on
+															}
+														ICR_RedrawScreen();
+														break;												
+												case 7: // 4th @ price	
+														local dPrice = ICR_GetLocalUserData("4PRICE")
+														if (dPrice == true) //if on
+															{
+																ICR_SetLocalUserData("4PRICE",false) //turn off
+															}
+														else
+															{
+																ICR_SetLocalUserData("4PRICE",true) //otherwise turn on
+															}
+														ICR_RedrawScreen();
+														break;
+												case 8: //percentage option
+														local nPerc = ICR_GetLocalUserData("NPERC") //get percentage flag
+														if (nPerc == true) //if on
+															{
+																ICR_SetLocalUserData("NPERC",false) //turn % off
+																ICR_SetLocalUserData("NPRICE",true) //turn AMT on
+															}
+														else
+															{
+																ICR_SetLocalUserData("NPERC",true)  //turn % on
+																ICR_SetLocalUserData("NPRICE",false) //turn AMT off
+															}
+														ICR_RedrawScreen();
+														break;		
+												case 9: //value option	
+														local nPrice = ICR_GetLocalUserData("NPRICE") //get AMT flag
+														if (nPrice == true) //if on
+															{
+																ICR_SetLocalUserData("NPRICE",false) //turn AMT off
+																ICR_SetLocalUserData("NPERC",true) //turn % on
+															}
+														else
+															{
+																ICR_SetLocalUserData("NPRICE",true) //turn AMT on
+																ICR_SetLocalUserData("NPERC",false) //turn % off
+															}
+														ICR_RedrawScreen();
+														break;
+												case 10: //department filter
+														dRay.clear() //Clear array of data		
+														dRay.push(0) //add 0 to array
+														ICR_ListDialog_AddItem("Please Select", true)
+														for(local nCount = 1; nCount <= 250; nCount++) //count through departments
+															{
+																local tPGM = ICR_GetPGMData(55,nCount); //Get PGM Data
+																local tName = tPGM.NAME //get name
+																				
+																dRay.push(tName) //add name to array
+																dRay.push(nCount) //add record to array
+																
+																ICR_ListDialog_AddItem(tName) //start list
+															}
+														local dResult = ICR_ListDialog("Choose department")
+														
+														if(dResult == 1)
+															{
+																print("Option 0 selected!")
+																ICR_SetLocalUserData("DEPNAME","Please select") //set department name
+																ICR_SetLocalUserData("DEPNUMB",0) //set department number
+															}
+														else
+															{
+																print ("selection was " + dResult + " which is " + dRay[dResult * 2 - 3])
+																ICR_SetLocalUserData("DEPNAME",dRay[dResult * 2 - 3]) //set Department name
+																ICR_SetLocalUserData("DEPNUMB",dRay[dResult * 2 - 2]) //set department record number
+															}
+														dRay.clear() //Clear array of data	
+														ICR_RedrawScreen();
+														break;
+												case 11: //group filter
+														gRay.clear() //Clear array of data		
+														gRay.push(0) //add 0 to array
+														ICR_ListDialog_AddItem("Please select", true)
+														for(local nCount = 1; nCount <= 250; nCount++) //count through groups
+															{
+																local tPGM = ICR_GetPGMData(2,nCount); //Get PGM Data
+																local gName = tPGM.NAME //get name
+																				
+																gRay.push(gName) //add name to array
+																gRay.push(nCount) //add record to array
+																
+																ICR_ListDialog_AddItem(gName) //create list
+															}
+														local gResult = ICR_ListDialog("Choose group")
+														
+														if(gResult == 1)
+															{
+																print("Option 0 selected!")
+																ICR_SetLocalUserData("GRPNAME","Please select") //set group name
+																ICR_SetLocalUserData("GRPNUMB",0) //set group number	
+															}
+														else
+															{
+																print ("selection was " + gResult + " which is " + gRay[gResult * 2 - 3])
+																ICR_SetLocalUserData("GRPNAME",gRay[gResult * 2 - 3]) //set group name
+																ICR_SetLocalUserData("GRPNUMB",gRay[gResult * 2 - 2]) //set group record number
+															}
+														gRay.clear() //Clear array of data
+														ICR_RedrawScreen();
+														break;
+												case 12: //5p rouding
+														local fiveP = ICR_GetLocalUserData("5PENCE") //5p rounding flag
+														local tenP = ICR_GetLocalUserData("10PENCE") //10p rounding flag
+														if(fiveP == true && tenP == false)
+															{
+																ICR_SetLocalUserData("5PENCE", false) //5p rounding flag
+																ICR_SetLocalUserData("10PENCE", false) //5p rounding flag
+															}
+														if(fiveP == false && tenP == true)
+															{
+																ICR_SetLocalUserData("5PENCE", true) //5p rounding flag
+																ICR_SetLocalUserData("10PENCE", false) //5p rounding flag
+															}
+														if(fiveP == false && tenP == false)
+															{
+																ICR_SetLocalUserData("5PENCE", true) //5p rounding flag
+																ICR_SetLocalUserData("10PENCE", false) //5p rounding flag
+															}
+														ICR_RedrawScreen();
+														break;											
+												case 13: //10p rounding
+														local fiveP = ICR_GetLocalUserData("5PENCE") //5p rounding flag
+														local tenP = ICR_GetLocalUserData("10PENCE") //10p rounding flag
+														if(tenP == true && fiveP == false)
+															{
+																ICR_SetLocalUserData("5PENCE", false) //5p rounding flag
+																ICR_SetLocalUserData("10PENCE", false) //5p rounding flag
+															}
+														if(tenP == false && fiveP == true)
+															{
+																ICR_SetLocalUserData("5PENCE", false) //5p rounding flag
+																ICR_SetLocalUserData("10PENCE", true) //5p rounding flag
+															}
+														if(tenP == false && fiveP == false)
+															{
+																ICR_SetLocalUserData("5PENCE", false) //5p rounding flag
+																ICR_SetLocalUserData("10PENCE", true) //5p rounding flag
+															}
+														ICR_RedrawScreen();
+														break;		
+												case 14: //increase option
+														local pInc = ICR_GetLocalUserData("INCREASE") 
+														if (pInc == true) //if increase flag set
+															{
+																ICR_SetLocalUserData("INCREASE",false) //turn increase flag off
+																ICR_SetLocalUserData("DECREASE",true) //turn decrease flag on
+															}
+														else
+															{
+																ICR_SetLocalUserData("INCREASE",true) //turn increase flag on
+																ICR_SetLocalUserData("DECREASE",false) //turn decrease flag off
+															}
+														ICR_RedrawScreen();
+														break;	
+												case 15: //decrease option
+														local pDec = ICR_GetLocalUserData("DECREASE")
+														if (pDec == true)
+															{
+																ICR_SetLocalUserData("DECREASE",false) //turn decrease flag off
+																ICR_SetLocalUserData("INCREASE",true) //turn increase flag on
+															}
+														else
+															{
+																ICR_SetLocalUserData("DECREASE",true) //turn decrease flag on
+																ICR_SetLocalUserData("INCREASE",false) //turn increase flag off
+															}
+														ICR_RedrawScreen();
+														break;	
+												case 25: //if confirmed
+														local nPercent = ICR_GetLocalUserData("PERCENT") //percent to increase
+														local nValue = ICR_GetLocalUserData("VALUE") //value to increase
+														local aPLU = ICR_GetLocalUserData("APLU") //starting PLU
+														local zPLU = ICR_GetLocalUserData("ZPLU") //ending PLU		
+														local nPerc = ICR_GetLocalUserData("NPERC") //percentage flag
+														local nPrice = ICR_GetLocalUserData("NPRICE") //amount flag
+														
+														if(aPLU == 0 || zPLU == 0 || nPerc == true && nPercent == 0 ||  nPrice == true && nValue == 0) //if not all values set correctly
+															{
+																ICR_MessageBox("Please enter the value to increase"," and the PLU range","",0)
+																ICR_RedrawScreen();
+																break;
+															}
+														if(aPLU > zPLU) //if from PLU higher than last PLU
+															{
+																ICR_MessageBox("From PLU is too high","Please check your values","",0)
+																break;
+															}
+														else
+															{
+																local nResult = ICR_MessageBox("Are you sure you wish to confirm?","","",1)
+																if(nResult == 1)
+																	{
+																		local nPerc = ICR_GetLocalUserData("NPERC") //percentage flag
+																		local nPrice = ICR_GetLocalUserData("NPRICE") //amount flag
+																		if(nPerc == true)
+																			{
+																				local nValue = ICR_GetLocalUserData("PERCENT") //get percent to increase/ decrease
+																				local nFrom = ICR_GetLocalUserData("APLU") //get from PLU
+																				local nTo = ICR_GetLocalUserData("ZPLU") //get to PLU
+																				print("CONFIRMED")
+																				ICR_Window_Enable (nWindowID,false) //open window
+																				ICR_RedrawScreen();
+																				RangePLU(nValue, nFrom, nTo)
+																				ICR_SetLocalUserData("PERCENT",0) //set value to 0
+																				ICR_SetLocalUserData("APLU",0) //set value to 0
+																				ICR_SetLocalUserData("ZPLU",0) //set value to 0
+																			}
+																		if(nPrice == true)
+																			{
+																				local nValue = ICR_GetLocalUserData("VALUE") //get value to increase/ decrease
+																				local nFrom = ICR_GetLocalUserData("APLU") //get from PLU
+																				local nTo = ICR_GetLocalUserData("ZPLU") //get to PLU
+																				print("CONFIRMED")
+																				ICR_Window_Enable (nWindowID,false) //open window
+																				ICR_RedrawScreen();
+																				RangePLU(nValue, nFrom, nTo)
+																				ICR_SetLocalUserData("PERCENT",0) //set value to 0
+																				ICR_SetLocalUserData("APLU",0) //set value to 0
+																				ICR_SetLocalUserData("ZPLU",0) //set value to 0
+																			}
+																	}
+																else
+																	{
+																		return false;
+																	}
+																	ResetData()
+																	ICR_RedrawScreen();
+																	ICR_MessageBox("Range programming completed","","",0) //confirmation message
+																	break;
+															}
+												case 26: //if cancelled
+														local nResult = ICR_MessageBox("Are you sure you wish to cancel?","","",1)
+														if(nResult == 1)
+															{
+																ICR_MessageBox("CANCELLED","","",0)
+																ICR_Window_Enable (nWindowID,false) //open window
+																ICR_SetLocalUserData("PERCENT",0) //set value to 0
+																ICR_SetLocalUserData("APLU",0) //set value to 0
+																ICR_SetLocalUserData("ZPLU",0) //set value to 0
+															}
+														else
+															{
+																return false;
+															}
+														ResetData()
+														ICR_RedrawScreen();
+														break;
+											}
+												
+										break; // Stop
+						case EVENT.MOVE:
+										break; // Stop
+					}
+			}
+
+	}
+	
+/*-------------------------------------------------------------------------------------------------------*/
+
+function RangePLU(nValue, nFrom, nTo)
+	{
+		local nPerc = ICR_GetLocalUserData("NPERC") //percentage flag
+		local nPrice = ICR_GetLocalUserData("NPRICE") //amount flag
+		
+		local sDept = ICR_GetLocalUserData("DEPNAME") //set department name
+		local nDept = ICR_GetLocalUserData("DEPNUMB") //set department number
+		local sGroup = ICR_GetLocalUserData("GRPNAME") //set department name
+		local nGroup = ICR_GetLocalUserData("GRPNUMB") //set department number	
+		
+		local fiveP = ICR_GetLocalUserData("5PENCE") //5p rounding flag
+		local tenP = ICR_GetLocalUserData("10PENCE") //10p rounding flag	
+
+		local pInc = ICR_GetLocalUserData("INCREASE") //get increase flag
+		local pDec = ICR_GetLocalUserData("DECREASE") //get decrease flag
+		
+		if(nPerc == true)
+			{
+				local fPrice = ICR_GetLocalUserData("1PRICE") //get 1st @ price flag
+				local sPrice = ICR_GetLocalUserData("2PRICE") //get 2nd @ price flag
+				local tPrice = ICR_GetLocalUserData("3PRICE") //get 3rd @ price flag
+				local hPrice = ICR_GetLocalUserData("4PRICE") //get 3rd @ price flag
+				for(local nCount = nFrom; nCount <= nTo; nCount++) // Count up
+					{
+						local nPLU = ICR_GetPGMData(1,nCount)
+						print("Getting PLU deets")
+						local aPrice = nPLU.PRICE1L1 //get 1st @ price
+						local bPrice = nPLU.PRICE2L1 //get 2nd @ price
+						local cPrice = nPLU.PRICE3L1 //get 3rd @ price
+						local dPrice = nPLU.PRICE4L1 //get 4th @ price
+						local dDept = nPLU.DEPT //get department
+						local dGroup = nPLU.GROUP //get group
+						
+						if(nDept == dDept || nGroup == dGroup || nDept == 0 && nGroup == 0) //if it matches our criteria
+							{
+								print("PLU " + nCount + " Level 1: 1st price is " + aPrice + " // 2nd price is " + bPrice + " // 3rd price is " + cPrice + " // 4th price is " + dPrice)
+								if(pInc == true) //if price increase
+									{
+										local nMod = 100 + nValue
+										print("Price increase modifier = " + nMod)
+										ICR_SetLocalUserData("MOD",nMod) //set modifier
+									}
+								if(pDec == true) //if price decrease
+									{
+										local nMod = 100 - nValue
+										print("Price decrease modifier = " + nMod)
+										ICR_SetLocalUserData("MOD",nMod) //set modifier
+									}
+								local nMod = ICR_GetLocalUserData("MOD") //get modifier amount
+								if(fPrice == true) //if 1st @ price flag is set
+									{
+										local xPrice = (aPrice * nMod) / 100
+										if(fiveP == true) //if 5p rounding
+											{
+												local fpMultiplier = (xPrice / 5).tointeger()
+												local fpValue = fpMultiplier * 5
+												print("5p goes into " + xPrice + " about " + fpMultiplier + " times. This would total " + fpValue)
+												if(fpValue >= xPrice)
+													{
+														print ("(" + xPrice + ") Price is equal too/smaller than rounded estimate (" + fpValue + "), we will use " + fpMultiplier + " x 5 = " + fpValue)
+														local xPrice = fpValue
+														ICR_SetLocalUserData("XPRICE", xPrice)	//set new price
+														
+													}
+												else
+													{
+														local fpTemp = fpMultiplier + 1
+														local fpTempValue = fpTemp * 5
+														print ("(" + xPrice + ") Price is bigger than rounded estimate (" + fpValue + "), we will use " + fpTemp + " x 5 = " + fpTempValue)
+														ICR_SetLocalUserData("XPRICE", fpTempValue) //set new price
+													}
+											}
+										if(tenP == true) //if 10p rounding
+											{
+												local tpMultiplier = (xPrice / 10).tointeger()
+												local tpValue = tpMultiplier * 10
+												print("10p goes into " + xPrice + " about " + tpMultiplier + " times. This would total " + tpValue)
+												if(tpValue >= xPrice)
+													{
+														print ("(" + xPrice + ") Price is equal too/smaller than rounded estimate (" + tpValue + "), we will use " + tpMultiplier + " x 5 = " + tpValue)
+														local xPrice = tpValue
+														ICR_SetLocalUserData("XPRICE", xPrice) //set new price
+													}
+												else
+													{
+														local tpTemp = tpMultiplier + 1
+														local tpTempValue = tpTemp * 10
+														print ("(" + xPrice + ") Price is bigger than rounded estimate (" + tpValue + "), we will use " + tpTemp + " x 10 = " + tpTempValue)
+														ICR_SetLocalUserData("XPRICE", tpTempValue) //set new price
+													}
+											}
+										if(fiveP == false && tenP == false) //if no rounding
+											{
+												ICR_SetLocalUserData("XPRICE", xPrice) //set new price
+											}
+									}
+								else
+									{
+										local xPrice = aPrice
+										ICR_SetLocalUserData("XPRICE", xPrice) //set price
+									}
+								if(sPrice == true) //if 2nd @ price flag is set
+									{
+										local yPrice = (bPrice * nMod) / 100
+										if(fiveP == true) //if 5p rounding
+											{
+												local fpMultiplier = (yPrice / 5).tointeger()
+												local fpValue = fpMultiplier * 5
+												print("5p goes into " + yPrice + " about " + fpMultiplier + " times. This would total " + fpValue)
+												if(fpValue >= yPrice)
+													{
+														print ("(" + yPrice + ") Price is equal too/smaller than rounded estimate (" + fpValue + "), we will use " + fpMultiplier + " x 5 = " + fpValue)
+														local yPrice = fpValue
+														ICR_SetLocalUserData("YPRICE", yPrice) //set new price
+													}
+												else
+													{
+														local fpTemp = fpMultiplier + 1
+														local fpTempValue = fpTemp * 5
+														print ("(" + yPrice + ") Price is bigger than rounded estimate (" + fpValue + "), we will use " + fpTemp + " x 5 = " + fpTempValue)
+														ICR_SetLocalUserData("YPRICE", fpTempValue) //set new price
+													}
+											}
+										if(tenP == true) //if 10p rounding
+											{
+												local tpMultiplier = (yPrice / 10).tointeger()
+												local tpValue = tpMultiplier * 10
+												print("10p goes into " + yPrice + " about " + tpMultiplier + " times. This would total " + tpValue)
+												if(tpValue >= yPrice)
+													{
+														print ("(" + yPrice + ") Price is equal too/smaller than rounded estimate (" + tpValue + "), we will use " + tpMultiplier + " x 5 = " + tpValue)
+														local yPrice = tpValue
+														ICR_SetLocalUserData("YPRICE", yPrice) //set new price
+													}
+												else
+													{
+														local tpTemp = tpMultiplier + 1
+														local tpTempValue = tpTemp * 10
+														print ("(" + yPrice + ") Price is bigger than rounded estimate (" + tpValue + "), we will use " + tpTemp + " x 10 = " + tpTempValue)
+														ICR_SetLocalUserData("YPRICE", tpTempValue) //set new price
+													}
+											}
+										if(fiveP == false && tenP == false) //if no roudning
+											{
+												ICR_SetLocalUserData("YPRICE", yPrice) //set new price
+											}
+									}
+								else
+									{
+										local yPrice = bPrice
+										ICR_SetLocalUserData("YPRICE", yPrice) //set price
+									}
+								if(tPrice == true) //if 3rd @ price flag is set
+									{
+										local zPrice = (cPrice * nMod) / 100
+										if(fiveP == true) //if 5p rounding
+											{
+												local fpMultiplier = (zPrice / 5).tointeger()
+												local fpValue = fpMultiplier * 5
+												print("5p goes into " + zPrice + " about " + fpMultiplier + " times. This would total " + fpValue)
+												if(fpValue >= zPrice)
+													{
+														print ("(" + zPrice + ") Price is equal too/smaller than rounded estimate (" + fpValue + "), we will use " + fpMultiplier + " x 5 = " + fpValue)
+														local zPrice = fpValue
+														ICR_SetLocalUserData("ZPRICE", zPrice) //set new price
+													}
+												else
+													{
+														local fpTemp = fpMultiplier + 1
+														local fpTempValue = fpTemp * 5
+														print ("(" + zPrice + ") Price is bigger than rounded estimate (" + fpValue + "), we will use " + fpTemp + " x 5 = " + fpTempValue)
+														ICR_SetLocalUserData("ZPRICE", fpTempValue) //set new price
+													}
+											}
+										if(tenP == true) //if 10p rounding
+											{
+												local tpMultiplier = (zPrice / 10).tointeger()
+												local tpValue = tpMultiplier * 10
+												print("10p goes into " + zPrice + " about " + tpMultiplier + " times. This would total " + tpValue)
+												if(tpValue >= zPrice)
+													{
+														print ("(" + zPrice + ") Price is equal too/smaller than rounded estimate (" + tpValue + "), we will use " + tpMultiplier + " x 5 = " + tpValue)
+														local zPrice = tpValue
+														ICR_SetLocalUserData("ZPRICE", zPrice) //set new price
+													}
+												else
+													{
+														local tpTemp = tpMultiplier + 1
+														local tpTempValue = tpTemp * 10
+														print ("(" + zPrice + ") Price is bigger than rounded estimate (" + tpValue + "), we will use " + tpTemp + " x 10 = " + tpTempValue)
+														ICR_SetLocalUserData("ZPRICE", tpTempValue) //set new price
+													}
+											}
+										if(fiveP == false && tenP == false) //if no rounding
+											{
+												ICR_SetLocalUserData("ZPRICE", zPrice) //set new price
+											}
+									}
+								else
+									{
+										local zPrice = cPrice
+										ICR_SetLocalUserData("ZPRICE", zPrice) //set price
+									}
+								if(hPrice == true) //if 4th @ price flag is set
+									{
+										local wPrice = (dPrice * nMod) / 100
+										if(fiveP == true) //if 5p rounding
+											{
+												local fpMultiplier = (wPrice / 5).tointeger()
+												local fpValue = fpMultiplier * 5
+												print("5p goes into " + wPrice + " about " + fpMultiplier + " times. This would total " + fpValue)
+												if(fpValue >= wPrice)
+													{
+														print ("(" + wPrice + ") Price is equal too/smaller than rounded estimate (" + fpValue + "), we will use " + fpMultiplier + " x 5 = " + fpValue)
+														local wPrice = fpValue
+														ICR_SetLocalUserData("WPRICE", wPrice) //set new price
+													}
+												else
+													{
+														local fpTemp = fpMultiplier + 1
+														local fpTempValue = fpTemp * 5
+														print ("(" + wPrice + ") Price is bigger than rounded estimate (" + fpValue + "), we will use " + fpTemp + " x 5 = " + fpTempValue)
+														ICR_SetLocalUserData("WPRICE", fpTempValue) //set new price
+													}
+											}
+										if(tenP == true) //if 10p rounding
+											{
+												local tpMultiplier = (wPrice / 10).tointeger()
+												local tpValue = tpMultiplier * 10
+												print("10p goes into " + wPrice + " about " + tpMultiplier + " times. This would total " + tpValue)
+												if(tpValue >= wPrice)
+													{
+														print ("(" + wPrice + ") Price is equal too/smaller than rounded estimate (" + tpValue + "), we will use " + tpMultiplier + " x 5 = " + tpValue)
+														local wPrice = tpValue
+														ICR_SetLocalUserData("WPRICE", wPrice) //set new price
+													}
+												else
+													{
+														local tpTemp = tpMultiplier + 1
+														local tpTempValue = tpTemp * 10
+														print ("(" + wPrice + ") Price is bigger than rounded estimate (" + tpValue + "), we will use " + tpTemp + " x 10 = " + tpTempValue)
+														ICR_SetLocalUserData("WPRICE", tpTempValue) //set new price
+													}
+											}
+										if(fiveP == false && tenP == false) //if no rounding
+											{
+												ICR_SetLocalUserData("WPRICE", wPrice) //set new price
+											}
+									}
+								else
+									{
+										local wPrice = dPrice
+										ICR_SetLocalUserData("WPRICE", wPrice) //set price
+									}								
+								local xPrice = ICR_GetLocalUserData("XPRICE") //get 1st @ price
+								local yPrice = ICR_GetLocalUserData("YPRICE") //get 2nd @ price
+								local zPrice = ICR_GetLocalUserData("ZPRICE") //get 3rd @ price
+								local wPrice = ICR_GetLocalUserData("WPRICE") //get 4th @ price
+								print("New 1st price is " + xPrice + " // New 2nd price is " + yPrice + " // New 3rd price is " + zPrice + " // New 4th price is " + wPrice)
+								
+								local tPLU = { }; //create table to input new prices
+								tPLU.PRICE1L1 <- xPrice;
+								tPLU.PRICE2L1 <- yPrice;
+								tPLU.PRICE3L1 <- zPrice;
+								tPLU.PRICE4L1 <- wPrice;
+								ICR_SetPGMData(1, nCount, tPLU); //set prices
+							}					
+					}
+			}
+		if(nPrice == true) //if AMT change
+			{
+				local fPrice = ICR_GetLocalUserData("1PRICE") //get 1st @ price
+				local sPrice = ICR_GetLocalUserData("2PRICE") //get 2nd @ price
+				local tPrice = ICR_GetLocalUserData("3PRICE") //get 3rd @ price
+				local hPrice = ICR_GetLocalUserData("4PRICE") //get 4th @ price
+				for(local nCount = nFrom; nCount <= nTo; nCount++) // Count up
+					{
+						local nPLU = ICR_GetPGMData(1,nCount)
+						print("Getting PLU deets")
+						local aPrice = nPLU.PRICE1L1 //get 1st @ price
+						local bPrice = nPLU.PRICE2L1 //get 2nd @ price
+						local cPrice = nPLU.PRICE3L1 //get 3rd @ price
+						local dPrice = nPLU.PRICE4L1 //get 4th @ price
+						local dDept = nPLU.DEPT //get department
+						local dGroup = nPLU.GROUP //get group
+						if(nDept == dDept || nGroup == dGroup || nDept == 0 && nGroup == 0) //if our criteria
+							{
+								print("PLU " + nCount + " Level 1: 1st price is " + aPrice + " // 2nd price is " + bPrice + " // 3rd price is " + cPrice+ " // 4th price is " + dPrice)
+								local nMod = nValue
+								print("Amount to add = " + nMod)
+								
+								if(pInc == true) //if increase
+									{
+										local nMod = nValue
+										print("Price increase modifier = " + nMod)
+										ICR_SetLocalUserData("MOD",nMod) //set modifier
+									}
+								if(pDec == true) //if decrease
+									{
+										local nMod = -nValue
+										print("Price decrease modifier = " + nMod)
+										ICR_SetLocalUserData("MOD",nMod) //set modifier
+									}
+								local nMod = ICR_GetLocalUserData("MOD") //get modifier amount
+														
+								if(fPrice == true) //if 1st @ price flag is set
+									{
+										if(aPrice != 0) //if PLU value doesn't equal 0
+											{ 
+												local xPrice = aPrice + nMod
+												if(fiveP == true) //if 5p rounding
+													{
+														local fpMultiplier = (xPrice / 5).tointeger()
+														local fpValue = fpMultiplier * 5
+														print("5p goes into " + xPrice + " about " + fpMultiplier + " times. This would total " + fpValue)
+														if(fpValue >= xPrice)
+															{
+																print ("(" + xPrice + ") Price is equal too/smaller than rounded estimate (" + fpValue + "), we will use " + fpMultiplier + " x 5 = " + fpValue)
+																local xPrice = fpValue
+																ICR_SetLocalUserData("XPRICE", xPrice) //set new price	
+																
+															}
+														else
+															{
+																local fpTemp = fpMultiplier + 1
+																local fpTempValue = fpTemp * 5
+																print ("(" + xPrice + ") Price is bigger than rounded estimate (" + fpValue + "), we will use " + fpTemp + " x 5 = " + fpTempValue)
+																ICR_SetLocalUserData("XPRICE", fpTempValue) //set new price
+															}
+													}
+												if(tenP == true) //if 10p rounding
+													{
+														local tpMultiplier = (xPrice / 10).tointeger()
+														local tpValue = tpMultiplier * 10
+														print("10p goes into " + xPrice + " about " + tpMultiplier + " times. This would total " + tpValue)
+														if(tpValue >= xPrice)
+															{
+																print ("(" + xPrice + ") Price is equal too/smaller than rounded estimate (" + tpValue + "), we will use " + tpMultiplier + " x 5 = " + tpValue)
+																local xPrice = tpValue
+																ICR_SetLocalUserData("XPRICE", xPrice) //set new price
+															}
+														else
+															{
+																local tpTemp = tpMultiplier + 1
+																local tpTempValue = tpTemp * 10
+																print ("(" + xPrice + ") Price is bigger than rounded estimate (" + tpValue + "), we will use " + tpTemp + " x 10 = " + tpTempValue)
+																ICR_SetLocalUserData("XPRICE", tpTempValue) //set new price
+															}
+													}
+												if(fiveP == false && tenP == false) 
+													{
+														ICR_SetLocalUserData("XPRICE", xPrice) //set new price
+													}
+											}
+									}
+								else
+									{
+										local xPrice = aPrice
+										ICR_SetLocalUserData("XPRICE", xPrice) //set price
+									}
+								if(sPrice == true) //if 2nd @ price flag is set
+									{
+										if(bPrice != 0) //if PLU value doesn't equal 0
+											{
+												local yPrice = bPrice + nMod
+												if(fiveP == true) //if 5p rounding
+													{
+														local fpMultiplier = (yPrice / 5).tointeger()
+														local fpValue = fpMultiplier * 5
+														print("5p goes into " + yPrice + " about " + fpMultiplier + " times. This would total " + fpValue)
+														if(fpValue >= yPrice)
+															{
+																print ("(" + yPrice + ") Price is equal too/smaller than rounded estimate (" + fpValue + "), we will use " + fpMultiplier + " x 5 = " + fpValue)
+																local yPrice = fpValue
+																ICR_SetLocalUserData("YPRICE", yPrice) //set new price
+															}
+														else
+															{
+																local fpTemp = fpMultiplier + 1
+																local fpTempValue = fpTemp * 5
+																print ("(" + yPrice + ") Price is bigger than rounded estimate (" + fpValue + "), we will use " + fpTemp + " x 5 = " + fpTempValue)
+																ICR_SetLocalUserData("YPRICE", fpTempValue) //set new price
+															}
+													}
+												if(tenP == true) //if 10p rounding
+													{
+														local tpMultiplier = (yPrice / 10).tointeger()
+														local tpValue = tpMultiplier * 10
+														print("10p goes into " + yPrice + " about " + tpMultiplier + " times. This would total " + tpValue)
+														if(tpValue >= yPrice)
+															{
+																print ("(" + yPrice + ") Price is equal too/smaller than rounded estimate (" + tpValue + "), we will use " + tpMultiplier + " x 5 = " + tpValue)
+																local yPrice = tpValue
+																ICR_SetLocalUserData("YPRICE", yPrice) //set new price
+															}
+														else
+															{
+																local tpTemp = tpMultiplier + 1
+																local tpTempValue = tpTemp * 10
+																print ("(" + yPrice + ") Price is bigger than rounded estimate (" + tpValue + "), we will use " + tpTemp + " x 10 = " + tpTempValue)
+																ICR_SetLocalUserData("YPRICE", tpTempValue) //set new price
+															}
+													}
+												if(fiveP == false && tenP == false) 
+													{
+														ICR_SetLocalUserData("YPRICE", yPrice) //set new price
+													}
+											}
+									}
+								else
+									{
+										local yPrice = bPrice
+										ICR_SetLocalUserData("YPRICE", yPrice) //set price
+									}
+								if(tPrice == true) //if 3rd @ price flag is set
+									{
+										if(cPrice != 0) //if PLU value doesn't equal 0
+											{
+												local zPrice = cPrice + nMod
+												if(fiveP == true) //if 5p rounding
+													{
+														local fpMultiplier = (zPrice / 5).tointeger()
+														local fpValue = fpMultiplier * 5
+														print("5p goes into " + zPrice + " about " + fpMultiplier + " times. This would total " + fpValue)
+														if(fpValue >= zPrice)
+															{
+																print ("(" + zPrice + ") Price is equal too/smaller than rounded estimate (" + fpValue + "), we will use " + fpMultiplier + " x 5 = " + fpValue)
+																local zPrice = fpValue
+																ICR_SetLocalUserData("ZPRICE", zPrice) //set new price
+															}
+														else
+															{
+																local fpTemp = fpMultiplier + 1
+																local fpTempValue = fpTemp * 5
+																print ("(" + zPrice + ") Price is bigger than rounded estimate (" + fpValue + "), we will use " + fpTemp + " x 5 = " + fpTempValue)
+																ICR_SetLocalUserData("ZPRICE", fpTempValue) //set new price
+															}
+													}
+												if(tenP == true) //if 10p rounding
+													{
+														local tpMultiplier = (zPrice / 10).tointeger()
+														local tpValue = tpMultiplier * 10
+														print("10p goes into " + zPrice + " about " + tpMultiplier + " times. This would total " + tpValue)
+														if(tpValue >= zPrice)
+															{
+																print ("(" + zPrice + ") Price is equal too/smaller than rounded estimate (" + tpValue + "), we will use " + tpMultiplier + " x 5 = " + tpValue)
+																local zPrice = tpValue
+																ICR_SetLocalUserData("ZPRICE", zPrice) //set new price
+															}
+														else
+															{
+																local tpTemp = tpMultiplier + 1
+																local tpTempValue = tpTemp * 10
+																print ("(" + zPrice + ") Price is bigger than rounded estimate (" + tpValue + "), we will use " + tpTemp + " x 10 = " + tpTempValue)
+																ICR_SetLocalUserData("ZPRICE", tpTempValue) //set new price
+															}
+													}
+												if(fiveP == false && tenP == false) 
+													{
+														ICR_SetLocalUserData("ZPRICE", zPrice) //set new price
+													}
+											}
+									}
+								if(hPrice == true) //if 4th @ price flag is set
+									{
+										if(dPrice != 0) //if PLU value doesn't equal 0
+											{
+												local wPrice = dPrice + nMod
+												if(fiveP == true) //if 5p rounding
+													{
+														local fpMultiplier = (wPrice / 5).tointeger()
+														local fpValue = fpMultiplier * 5
+														print("5p goes into " + wPrice + " about " + fpMultiplier + " times. This would total " + fpValue)
+														if(fpValue >= wPrice)
+															{
+																print ("(" + wPrice + ") Price is equal too/smaller than rounded estimate (" + fpValue + "), we will use " + fpMultiplier + " x 5 = " + fpValue)
+																local wPrice = fpValue
+																ICR_SetLocalUserData("WPRICE", wPrice) //set new price
+															}
+														else
+															{
+																local fpTemp = fpMultiplier + 1
+																local fpTempValue = fpTemp * 5
+																print ("(" + wPrice + ") Price is bigger than rounded estimate (" + fpValue + "), we will use " + fpTemp + " x 5 = " + fpTempValue)
+																ICR_SetLocalUserData("WPRICE", fpTempValue) //set new price
+															}
+													}
+												if(tenP == true) //if 10p rounding
+													{
+														local tpMultiplier = (wPrice / 10).tointeger()
+														local tpValue = tpMultiplier * 10
+														print("10p goes into " + wPrice + " about " + tpMultiplier + " times. This would total " + tpValue)
+														if(tpValue >= wPrice)
+															{
+																print ("(" + wPrice + ") Price is equal too/smaller than rounded estimate (" + tpValue + "), we will use " + tpMultiplier + " x 5 = " + tpValue)
+																local wPrice = tpValue
+																ICR_SetLocalUserData("WPRICE", wPrice) //set new price
+															}
+														else
+															{
+																local tpTemp = tpMultiplier + 1
+																local tpTempValue = tpTemp * 10
+																print ("(" + wPrice + ") Price is bigger than rounded estimate (" + tpValue + "), we will use " + tpTemp + " x 10 = " + tpTempValue)
+																ICR_SetLocalUserData("WPRICE", tpTempValue) //set new price
+															}
+													}
+												if(fiveP == false && tenP == false) 
+													{
+														ICR_SetLocalUserData("WPRICE", wPrice) //set new price
+													}
+											}
+									}
+								
+								local xPrice = ICR_GetLocalUserData("XPRICE") //get 1st @ price				
+								local yPrice = ICR_GetLocalUserData("YPRICE") //get 2nd @ price
+								local zPrice = ICR_GetLocalUserData("ZPRICE") //get 3rd @ price
+								local wPrice = ICR_GetLocalUserData("WPRICE") //get 4th @ price
+								print("New 1st price is " + xPrice + " // New 2nd price is " + yPrice + " // New 3rd price is " + zPrice + " // New 4th price is " + wPrice)
+								
+								local tPLU = { }; //create table for price
+								tPLU.PRICE1L1 <- xPrice;
+								tPLU.PRICE2L1 <- yPrice;
+								tPLU.PRICE3L1 <- zPrice;
+								tPLU.PRICE4L1 <- wPrice;
+								ICR_SetPGMData(1, nCount, tPLU); //save new prices
+							}
+					}
+			}
+	}
+	
+/*-------------------------------------------------------------------------------------------------------*/
+
+function ResetData()
+	{
+		ICR_SetLocalUserData("PERCENT",0) //percent to increase
+		ICR_SetLocalUserData("VALUE",0) //value to increase
+		ICR_SetLocalUserData("APLU",0) // PLU from
+		ICR_SetLocalUserData("ZPLU",0) //PLU to
+		ICR_SetLocalUserData("1PRICE",true) //1st price flag
+		ICR_SetLocalUserData("2PRICE",false) //2nd price flag
+		ICR_SetLocalUserData("3PRICE",false) //3rd price flag
+		ICR_SetLocalUserData("4PRICE",false) //4th price flag
+		ICR_SetLocalUserData("XPRICE", 0) //saving 1st price value
+		ICR_SetLocalUserData("YPRICE", 0) //saving 2nd price value
+		ICR_SetLocalUserData("ZPRICE", 0) //saving 3rd price value
+		ICR_SetLocalUserData("WPRICE", 0) //saving 3rd price value
+		ICR_SetLocalUserData("NPERC", true) //percentage flag
+		ICR_SetLocalUserData("NPRICE", false) //amount flag
+		ICR_SetLocalUserData("5PENCE",false) //5p rounding flag
+		ICR_SetLocalUserData("10PENCE",false) //10p rounding flag	
+		ICR_SetLocalUserData("DEPNAME","Please select") //set department name
+		ICR_SetLocalUserData("DEPNUMB",0) //set department number
+		ICR_SetLocalUserData("GRPNAME","Please select") //set group name
+		ICR_SetLocalUserData("GRPNUMB",0) //set group number
+		ICR_SetLocalUserData("WINDOW",false) //set window off
+		ICR_SetLocalUserData("DECREASE",false) //set decrease value off
+		ICR_SetLocalUserData("INCREASE",true) //set decrease value off
+		ICR_SetLocalUserData("MOD",0) //modifier amount
+		
+		dRay.clear() //Clear array of data
+		gRay.clear() //Clear array of data
+		
+		print ("USER DATA RESET")
+	}

@@ -1,0 +1,44 @@
+local bDebugPrinting = true;	// set this false to disable all the debug printing in the output file
+
+function onInit()
+{
+	ICR_SetLocalUserData("nPayAccountHALO", 100, true);
+	ICR_AdvertiseProgramSetting("Pay Account HALO", "nPayAccountHALO");
+	ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+}
+
+function BeforeKeyPress(nFile,nRecord,nKeyType)
+{
+	if(nKeyType == 23)
+	{
+		local tKey = ICR_GetPGMData(nFile,nRecord);
+		if (tKey.VALUE > 0)
+		return true;
+		
+		local nInput = 0;
+		local szInput = ICR_GetInput();
+		if(szInput != "")
+		{
+			nInput = szInput.tointeger();
+		}			
+		
+		if(nInput == 0)
+			{
+			nInput = ICR_GetNumberDialog(tKey.NAME);
+			ICR_SetInput(nInput);
+			}
+		if(nInput == 0)
+		{
+		ICR_Error(3);
+		return false;
+		}
+		
+		if (nInput <= ICR_GetLocalUserData("nPayAccountHALO") * 100)
+			return true;
+		else
+			{
+			ICR_Error(44);
+			return false;
+			}
+	}
+}

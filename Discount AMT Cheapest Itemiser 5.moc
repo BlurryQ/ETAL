@@ -1,0 +1,113 @@
+﻿
+local bDebugPrinting = true;	// Set this false to disable all the debug printing in the output file
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Create a non window subtotal button
+I haven't made any autocreates
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+local aRay = [] //create array
+
+function OnInit()
+
+	{
+		ICR_EnableDebugLog(bDebugPrinting);	
+		ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+		ICR_SetFeature("CONSOLE",bDebugPrinting);
+		ICR_SetFeature("AUTORESTART",bDebugPrinting);
+		
+		ICR_SetLocalUserData("DISCOUNT",10000) //Set discount to £100
+		aRay.clear() //empty array
+	}
+	
+	
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function BeforeKeyPress(nFile, nRecord, nKeytype)
+	{
+		if(nFile == 52 && nRecord == 25) // if its our discount key
+			{		
+				ICR_KeyPress(53,196) //Subtotal (not standard)
+				
+				local tClerkBuff = ICR_GetClerkBuffer_Index(); //get clerk sale info
+				for(local nCount = 1; nCount <= tClerkBuff.REGPOS; nCount++) //get the buffer size
+					{   
+						local tThisItem = ICR_GetClerkBuffer_Item(nCount); // go through each item
+				
+						if(tThisItem.FILE == 1) // if it's a PLU
+							{
+								local tThisPLU = ICR_GetPGMData(tThisItem.FILE, tThisItem.RECORD); //get PGM data
+								if((tThisPLU.FLAG1 & 0x80) == 128) //if itemiser 5
+									{
+										print("This is itemiser 5")
+										print("Item "+nCount+" is a PLU")
+										local pQty = (tThisItem.QUANTITY)/100 //quantity of product in sale
+										local pTotal = tThisItem.PRICE //price of product in sale
+										print("Item "+nCount+" is Record "+tThisItem.RECORD+" with "+pQty+" items totalling "+pTotal)
+										
+										local nAMT = pTotal/pQty //work out price per product
+										
+										aRay.push(nAMT) //enter individual value into array
+									}	  
+							}    
+					}
+					
+				local aLength = aRay.len() //get array length
+				print("length = "+aLength)
+				
+				for(local nCount = 0; nCount <= (aLength - 1); nCount++) //count up the array length
+					{
+						local nAMT = ICR_GetLocalUserData("DISCOUNT") //get DISCOUNT value
+						local rCurr = aRay[nCount] //get current item value
+						print("Lowest value is currently " + nAMT)
+						print("Current Value is " + rCurr)
+						print("Lowest " +nAMT + ">= Current "+rCurr)
+						if(nAMT <= rCurr) //if DISCOUNT amount is smaller
+							{
+								print("Lowest is now "+nAMT)
+								ICR_SetLocalUserData("DISCOUNT",nAMT) //save value
+								print("Set " + nAMT)	
+							}
+						else
+							{
+								print("Lowest is now "+rCurr)
+								ICR_SetLocalUserData("DISCOUNT",rCurr) //save value
+								print("Set " + rCurr)	
+							}
+					}
+					
+				local nAMT = ICR_GetLocalUserData("DISCOUNT") //get DISCOUNT value
+				if(nAMT == 10000) //if amount hasn't changed
+					{
+						ICR_MessageBox("No Loyalty Items in order","","",0) //error message
+						return false; //do not continue
+					}
+				else
+					{
+						ICR_SetInput(nAMT) //set value into discount button
+					}
+			}
+		else
+			{
+				return true;
+			}
+	}
+	
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------------*/	
+
+function AfterKeyPress(nFile, nRecord, nKeytype)
+		{
+			if(nFile == 52 && nRecord == 25) // if its our discount key
+				{		
+					aRay.clear()
+					ICR_SetLocalUserData("DISCOUNT",10000) //Set discount to £100
+					print("aRay & User Data have been reset")
+				}
+			else
+				{
+					return true;
+				}
+		}
+		
+		
+		

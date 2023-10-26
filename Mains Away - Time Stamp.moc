@@ -1,0 +1,30 @@
+﻿local bDebugPrinting = false;	// Set this false to disable all the debug printing in the output file
+
+local sNumber = 91
+
+function OnInit()
+{
+	ICR_EnableDebugLog(bDebugPrinting);	
+	ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+	ICR_SetFeature("CONSOLE",bDebugPrinting);
+	ICR_SetFeature("AUTORESTART",bDebugPrinting);
+}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function OnRunScriptKeyPress(nFile, nRecord, nNumber, nValue, nFlag)
+	{
+		if(nNumber == sNumber)
+			{
+				local nDate = date() //get date
+				local nMin = nDate.min
+				local nHour = nDate.hour
+				local nTime = nHour + ":" + nMin
+				
+				print("The time stamped is " + nTime)
+				
+				ICR_KeyPress(1,12038) //press mains away
+				ICR_SetNextDialogInput(nTime) //enter time as message
+				ICR_KeyPress(53,243) //press message to KP
+			}
+	}

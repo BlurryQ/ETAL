@@ -1,0 +1,61 @@
+﻿
+local bDebugPrinting = false;	// Set this false to disable all the debug printing in the output file
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+dofile("etal\\lib\\keys.moc"); // Load Keys from lib (auto crate key)
+
+local vNumber = 12
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function OnInit()
+
+	{
+		ICR_EnableDebugLog(bDebugPrinting);	
+		ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+		ICR_SetFeature("CONSOLE",bDebugPrinting);
+		ICR_SetFeature("AUTORESTART",bDebugPrinting);
+		
+		ICR_SetLocalUserData("PRINT",0) //turn printing off
+		
+	}
+	
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function BeforeKeyPress(nFile, nRecord, nKeytype)
+	{
+		if(nFile == 52 && nRecord == vNumber)
+			{
+				local tCode = ICR_GetAlphaDialog("Enter code", 30) //enter text for reason
+				print("Code entered is " + tCode)
+				ICR_SetLocalUserData("TEXT",tCode) //save text
+				ICR_SetLocalUserData("PRINT",1) //turn printing on
+			}
+		else
+			{
+				return true;
+			}
+	}
+	
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+	
+function PreSaleFinalised()
+	{
+		local tPrint = ICR_GetLocalUserData("PRINT") //get print setting
+		switch(tPrint)
+			{
+				case 0: 
+						break;
+				case 1:
+						local tCode = ICR_GetLocalUserData("TEXT") //get sub total record number
+						ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // Print top blank line #1
+						ICR_JournalLine(" ", 0, 0, 0, 100, 0); // Print top blank line #1
+						ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // Print top blank line #2
+						ICR_JournalLine(" ", 0, 0, 0, 100, 0); // Print top blank line #2
+						ICR_ReceiptLine  ("Voucher Redeemed: " + tCode + "", 0, 0, 0, 100, 0); // Print total line
+						ICR_JournalLine  ("Voucher Redeemed: " + tCode + "", 0, 0, 0, 100, 0); // Print total line	
+						ICR_SetLocalUserData("PRINT",0) //turn printing off
+						break;						
+			}
+	}

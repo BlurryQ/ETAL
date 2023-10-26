@@ -1,0 +1,104 @@
+﻿local bDebugPrinting = true;	// set this false to disable all the debug printing in the output file
+
+local nSpace = []; //create empty array
+local sWords = []; //create empty array
+
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+
+}
+
+/*--------------------------------------------------------------------------------------------------------------------*/
+
+function OnRunScriptKeyPress (nFile, nRecord, nNumber, nValue, nFlag)
+	{
+		if(nNumber == 30) //If our key
+			{
+				local aText = "I am a mountain & I am the Sea"
+				Segregate(aText)
+				print(sWords[0]+"/"+sWords[1]+"/"+sWords[2]+"/"+sWords[3]+"/"+sWords[4]+"/"+sWords[5]+"/"+sWords[6]+"/"+sWords[7]+"/"+sWords[8]+"/")
+			}
+	}
+		
+/*--------------------------------------------------------------------------------------------------------------------*/
+//Function below seperates sentence strings into words
+/*--------------------------------------------------------------------------------------------------------------------*/
+
+function Segregate(aText)
+
+			{
+				nSpace.clear() //clear array table
+				sWords.clear() //clear array table	
+				
+				print(aText)
+				
+				local aLength = aText.len() //get length
+				print ("aLenth = "+aLength)
+			
+				for(local nCount = 0;nCount < aLength; nCount++) //count first character to last character
+					{
+						local cInfo = aText[nCount]; //get character info
+						print("Character ref: "+cInfo);
+						
+							if(cInfo == 32)
+								{
+									print ("This should be position "+(nCount)) //+1 to include space
+									nSpace.push(nCount) //add it to array
+								}
+					}
+				
+				local rLength = nSpace.len() //get length
+				print("Array length is "+rLength)
+					
+					if(rLength != 0)
+						{
+					
+							local fSlice = nSpace[0] //1st space position
+							print("First word ends at position "+fSlice)
+							local fText = aText.slice(0,fSlice) //
+							print("First Text = " +fText)
+							sWords.push(fText)					
+						
+							local tLength = aText.len()  //get text length
+							nSpace.push(aLength)
+							local aLength = nSpace.len()  //get text length
+							local rLength = aLength-1
+							print("nSpace new length is "+rLength)
+							
+							foreach(idx , val in nSpace) //for each value in array
+								{
+									print("idx = " +idx+ " // Slice = "+val)
+								}
+						
+							for(local nCount = 0;nCount < rLength; nCount++) //count first character to last character
+								{
+									local tSlice = nSpace[nCount] + 1//Get position to slice
+									print(nCount+": Slice begins: "+tSlice+" // Slice ends: "+nSpace[nCount+1])
+										
+									local nText = aText.slice(tSlice, nSpace[nCount+1]) //Slice and return text
+									print("Next Text = " +nText)
+									sWords.push(nText) //push string to array table
+								}		
+
+								local aLength = aText.len() //get length
+								local rLength = nSpace.len() //get length
+							
+								local brLength = sWords.len()
+							
+								for(local nCount = 0;nCount < brLength; nCount++) //count first character to last character
+									{
+										print(nCount+" word is "+sWords[nCount])
+									}
+						}
+							else
+						{
+							sWords.push(aText)
+							print("Only word is "+sWords[0])
+						}
+ 			}
+
+		

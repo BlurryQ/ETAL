@@ -1,0 +1,79 @@
+local bDebugPrinting = false;	//  debug printing is a yes :)
+/*-------------------------------------------------------------------------------------------------------------------------------------------*/
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+}
+/*-------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function BeforeKeyPress(nFile, nRecord, nKeytype)
+
+{
+	if ((nFile == 52) && (nRecord == 8 || nRecord ==27))//If the keys we care about
+	
+		{
+			local tClerkBuffer = ICR_GetClerkBuffer_Index();//Get buffer
+			local nTable = (tClerkBuffer.TABLE);//Get table number
+			print("Table Number = " + nTable);//print table number
+			local nCovers = (tClerkBuffer.COVERS);//Get cover info
+			print ("covers =   " + nCovers);//Print cover info
+			
+				if (nTable == 0)//If no table open
+					{			
+						ICR_Sound(1);//Play error sound
+						ICR_MessageBox ("No Table Open!","","Empty",0);//Tell staff no table is open
+						return false;//do not proceed
+					}
+			
+				if (nCovers == 0)//If no covers entered
+					{			
+						ICR_Sound(1);//Play error sound
+						ICR_MessageBox ("No covers entered!","","Empty",0);//Tell staff no covers have been entered
+						ICR_KeyPress(53,130); //Press cover key
+						return true;//do not proceed
+					}
+				
+				else
+					{
+						return true;//Carry on if all is good
+					}
+		}
+}
+
+/*				if (nCovers = 0)
+					{
+					ICR_GetNumberDialog("Enter the */
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function AfterKeyPress(nFile, nRecord, nKeytype)
+
+{
+	if (nFile == 52)//If transaction key
+	{			
+		switch(nRecord)
+		{
+			case 8://If Thai Tasting £26.50						
+				local tClerkBuffer = ICR_GetClerkBuffer_Index();//Get buffer
+				local nCovers = (tClerkBuffer.COVERS);//Get cover info
+				print ("covers =   " + nCovers);//Print cover info
+				ICR_SetInput(nCovers);//Input covers figure
+				ICR_KeyPress(53,91);//Multiply
+				ICR_KeyPress(1,25);// £26.50 Tasting PLU
+				return true;//Carry on		
+			case 27://If Thai Tasting £22.50			
+				local tClerkBuffer = ICR_GetClerkBuffer_Index()//Get buffer
+				local nCovers = (tClerkBuffer.COVERS);//Get cover info
+				print ("covers =   " + nCovers)//Print cover info
+				ICR_SetInput(nCovers);//Input covers figure
+				ICR_KeyPress(53,91);//Multiply
+				ICR_KeyPress(1,25);// £22.50 Tasting PLU
+				return true;//Carry on						
+			default: //Anything else
+				return true;
+		}
+	}	
+}

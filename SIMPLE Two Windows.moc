@@ -1,0 +1,98 @@
+﻿local bDebugPrinting = true;	// set this false to disable all the debug printing in the output file
+
+
+/*----------------------------------Window Information----------------------------------*/
+local nWindowID = 0; //No ID for Window
+local tWindowID = 0; //No ID for Window 2
+local nWindowDimensions = 0; //No dimensions for Window 2
+local tWindowDimensions = 0; //No dimensions for Window 2
+/*--------------------------------END Window Information--------------------------------*/
+
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+
+/*----------------------------------Window Information----------------------------------*/
+nWindowID = ICR_SalesModeWindow_Add("window.xml", true); //Adding window.xml to script - true = Home Mode
+nWindowDimensions = ICR_GetWindowDimensions(nWindowID); //get dimensions from the xml
+local nWindowEnable = ICR_Window_Enable (nWindowID,false); //Turn window off
+
+tWindowID = ICR_SalesModeWindow_Add("window2.xml", true); //Adding window2.xml to script - true = Home Mode
+tWindowDimensions = ICR_GetWindowDimensions(tWindowID); //get dimensions from the second xml
+local tWindowEnable = ICR_Window_Enable (tWindowID,false); //Turn window2 off
+/*--------------------------------END Window Information--------------------------------*/
+}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function PaintWindow() //This is where I put the things I want in the window (custom function)
+{
+	
+	local tFont = ICR_CreateFont("Arial", 20); //Setting font
+    ICR_SelectFont(tFont); // Selecting font
+    ICR_SetText_Colour(000000); //Colour = black
+	ICR_DrawText (10,50,"Hello"); //position left, top + text
+	ICR_DrawText (10,70,"Hi"); //position left, top + text
+	
+	
+	local iLoad = ICR_LoadImage("Home.png"); //Load image into ETAL
+	local iSelect = ICR_SelectImage(iLoad); //Select Image
+	ICR_DrawImage(10, 10); //Display Image
+	
+}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function PaintWindowTwo() //This is where I put the things I want in the second window (custom function)
+{
+	
+	local tFont = ICR_CreateFont("Arial", 20); //Setting font
+    ICR_SelectFont(tFont); // Selecting font
+    ICR_SetText_Colour(000000); //Colour = black
+	ICR_DrawText (10,50,"Goodbye"); //position left, top + text
+	ICR_DrawText (10,70,"Bye!"); //position left, top + text
+	
+	
+	local iLoad = ICR_LoadImage("Home.png"); //Load image into ETAL
+	local iSelect = ICR_SelectImage(iLoad); //Select Image
+	ICR_DrawImage(10, 10); //Display Image
+	
+}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function OnWindowPaint(nID) //launched above window I want created
+	{
+	  if(nID == nWindowID) //another function call from ICRTouch askng what needs to happen to make our window redraw
+		  {
+			PaintWindow(); //run function above
+		  }
+	  if(nID == tWindowID) //Same as above for window 2
+		  {
+			PaintWindowTwo(); //run function above for window 2
+		  }		  
+	}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+	function AfterModeChange(nFrom, nTo)
+	{
+		if(nTo == 7) //If changed to something other than home
+			{
+				ICR_Window_Enable (nWindowID,true) //open window
+				ICR_RedrawWindow(21, nWindowID); //Reload Window
+				print("<--- HOME --->")
+				
+				ICR_Window_Enable (tWindowID,true) //open window 2
+				ICR_RedrawWindow(21, tWindowID); //Reload Window 2
+				print("<--- HOME --->")
+			}
+		else
+			{
+				ICR_Window_Enable (nWindowID,false) //close window
+				ICR_Window_Enable (tWindowID,false) //close window 2
+			}
+	}

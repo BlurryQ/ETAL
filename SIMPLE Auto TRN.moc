@@ -1,0 +1,65 @@
+﻿local bDebugPrinting = true;	// set this false to disable all the debug printing in the output file
+
+local aRay = []; //create an empty array
+
+function OnInit()
+{
+    ICR_EnableDebugLog(bDebugPrinting);
+    ICR_SetFeature("CONSOLE",bDebugPrinting);
+    ICR_SetFeature("AUTORESTART",bDebugPrinting);
+	
+}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function OnRunScriptKeyPress (nFile, nRecord, nNumber, nValue, nFlag)
+	{
+		if(nNumber == 30) //If our key
+			{
+				aRay.clear() //Clear array of data
+				
+				local nPGM = ICR_GetPGMData(399,52); //Get PGM Data
+				local tMax = nPGM.SIZE //Get TRN Maximim file size
+				print("Transaction key file size is "+tMax)
+				
+				aRay.push(0) //add 0 to array
+				
+				for(local nCount = 1; nCount <= tMax; nCount++)
+					{
+						local tPGM = ICR_GetPGMData(52,nCount); //Get PGM Data
+						local tKey = tPGM.KEYTYPE //get keytype
+						local tName = tPGM.NAME //get name
+											
+						if(tKey == 26 || tKey == 28) //if minus amount or percentage
+							{
+								print (tName+" is record number "+nCount+" has keytype number " +tKey)
+								aRay.push(tName) //add name to array
+								aRay.push(nCount) //add record to array
+							}
+					}
+						foreach(idx , val in aRay) //for each value in array
+							{
+								print("TABLE: idx = " +idx+ " // Record = "+val)
+							}
+							
+						local aLength = aRay.len() //length of array
+						print("Array length = "+aLength)
+
+						ICR_ListDialog_AddItem(aRay[1],true); //add next entry in list (even numbers array)
+
+						for(local nCount = 2; nCount <= ((aLength-1)/2); nCount++) //count up to length of array
+							{
+								ICR_ListDialog_AddItem(aRay[2*nCount-1]); //add next entry in list (even numbers array)
+							}
+					local nResult = ICR_ListDialog("Messages"); //Name of list
+					
+					if(nResult != 0) //if result isn't 0
+						{
+							print("RESULT ===== "+nResult)
+							local eTRN = aRay[(2*nResult)] //odd numbers
+							print("TRN should equal number "+eTRN)
+							ICR_KeyPress(52,eTRN);
+							return true;
+						}
+			}
+	}

@@ -1,0 +1,113 @@
+﻿local bDebugPrinting = false;	// set this false to disable all the debug printing in the output file
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------
+
+Create deposit drawer
+
+-------------------------------------------------------------------------------------------------------------------------------------------*/
+
+dofile("etal\\lib\\keys.moc"); // load Keys from lib (auto crate key)
+local nDepIn = 81
+local nDepRed = 85
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------*/
+function OnInit()
+	{
+		ICR_EnableDebugLog(true);	
+		ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+		ICR_SetFeature("CONSOLE",bDebugPrinting);
+		ICR_SetFeature("AUTORESTART",bDebugPrinting);
+
+		local tDepIn = CheckForKey( { NAME = "DEPOSIT IN" , MATCHNAME = true, FILE = 52, KEYTYPE = 21, VALUE = 0, MATCHVALUE = true} ); //Create TRN key
+		print("Deposit IN TRN key is record "+tDepIn)
+		ICR_SetLocalUserData("TRNDEPIN",tDepIn) // Save transaction key record number locally
+
+		local tDepRed = CheckForKey( { NAME = "DEPOSIT REDEEMED" , MATCHNAME = true, FILE = 52, KEYTYPE = 22, VALUE = 0, MATCHVALUE = true} ); //Create TRN key
+		print("Deposit REDEEMED TRN key is record "+tDepRed)
+		ICR_SetLocalUserData("TRNDEPRED",tDepRed) // Save transaction key record number locally
+		
+		local sDepIn = CheckForKey( { NAME = "DEPOSIT IN" , MATCHNAME = true, FILE = 53, KEYTYPE = 110, SCRIPTNUMBER = nDepIn, MATCHVALUE = true} ); //Create STS key
+		print("Deposit IN STS key is record "+sDepIn)
+
+		local fDec = CheckForKey( { NAME = "DEPOSIT REDEEMED" , MATCHNAME = true, FILE = 53, KEYTYPE = 110, SCRIPTNUMBER = nDepRed, MATCHVALUE = true} ); //Create STS key
+		print("Deposit REDEEMED STS key is record "+fDec)
+	}
+/*-------------------------------------------------------------------------------------------------------------------------------------------*/
+
+
+function OnRunScriptKeyPress(nFile, nRecord, nNumber, nValue, nFlag)
+	{
+		if (nNumber == nDepIn) //Deposit in
+			{
+				local tDepIn = ICR_GetLocalUserData("TRNDEPIN") //get trn key for deposit in
+				local nDepositTaken = ICR_GetNumberDialog("Enter amount to charge customer",0,false); //keypad to enter desired amount
+				print ("Deposit customer is paying -----> £" + nDepositTaken);//print for debug
+					if(nDepositTaken == 0)
+						{
+							ICR_Sound(2) //Error Noise
+							ICR_MessageBox("Value cannot equal £0!","Cancelling.","X",0) 
+							return false;
+						}
+					else
+						{	
+							local nDisplay = format("%0.2f",nDepositTaken.tofloat()/100)	// creating the current amount and shifting the decimal over
+							local nContinue = ICR_MessageBox("Are you taking a deposit of £"+nDisplay+"?","","",1) // confirming the topup amount
+							
+							if (nContinue == 1) //if they want to continue		   
+							   {
+									ICR_ListDialog_AddItem("Paying cash",true);
+									ICR_ListDialog_AddItem("Paying card");
+									local nPay = ICR_ListDialog("How are they paying?");
+									print("They are paying --->  " + nPay);
+										switch(nPay)
+											{
+												case 1: // If Cash
+													ICR_SetInput(nDepositTaken); // Put top up amount into buffer
+													ICR_SetNextDialogInput(1); // cash drawer
+													ICR_KeyPress(52,tDepIn); // deposit taken
+													return true;
+													break;
+												case 2: //if card
+													ICR_SetInput(nDepositTaken); // put top up amount into buffer
+													ICR_SetNextDialogInput(3); //card drawer
+													ICR_KeyPress(52,tDepIn); // deposit taken
+													return true;
+													break;
+												default: //If ESC
+													return false;
+													break;
+											}
+						
+								}
+						}
+			}	
+	
+/*-------------------------------------------------------------------------------------------------------------------------------------------*/
+	
+	if (nNumber == nDepRed) //Deposit Redeemed
+		{
+			local tDepRed = ICR_GetLocalUserData("TRNDEPRED") //get trn key for deposit redeemed
+			local nDepositRedeemed = ICR_GetNumberDialog("Enter value to remove from bill",0,false); //keypad to enter desired amount
+			print ("Deposit deducted -----> " + nDepositRedeemed);//print for debug
+			if(nDepositRedeemed == 0)
+				{
+					ICR_Sound(2) //Error Noise
+					ICR_MessageBox("Value cannot equal £0!","Cancelling.","X",0) 
+					return false;
+				}
+			else
+				{
+					local nDisplay = format("%0.2f",nDepositRedeemed.tofloat()/100)	// creating the current amount and shifting the decimal over
+					local nContinue = ICR_MessageBox("Are you redeeming a deposit of £"+nDisplay+"?","","",1) // confirming the topup amount
+									
+					if (nContinue == 1) //if they want to continue
+						{
+							ICR_SetInput(nDepositRedeemed); // Put redeemed amount into buffer
+							ICR_SetNextDialogInput(4); // deposit drawer
+							ICR_KeyPress(52,tDepRed); // deposit redeememed
+						}
+				}
+		}
+}
+	
+/*-------------------------------------------------------------------------------------------------------------------------------------------*/

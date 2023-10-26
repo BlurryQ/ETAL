@@ -1,0 +1,30 @@
+local bDebugPrinting = false;	// set this false to disable all the debug printing in the output file
+
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+}
+
+/*----------------------------------------------------------*/
+
+function OnRunScriptKeyPress(nFile, nRecord, nNumber, nValue, nFlag)
+{
+	if(nNumber = 404) //If our button
+	{
+		ICR_KeyPress(53,280); //Press STS with List PLU GIN
+		ICR_KeyPress(53,280); //Press STS with List PLU GIN
+		ICR_KeyPress(53,281); //Press STS with List PLU GIN MIXER
+		ICR_KeyPress(53,281); //Press STS with List PLU GIN MIXER
+		ICR_KeyPress(53,192); //Press subtotal
+		ICR_KeyPress(52,58);  //Press gin tasting 100% discount
+		
+	}
+	else
+	{
+		return true; //Carry on
+	}
+}
+		

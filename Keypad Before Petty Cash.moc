@@ -1,0 +1,44 @@
+local bDebugPrinting = false;	//  debug printing is a yes :)
+//-------------------------------------------------------------------------------------------------------------------------------------------//
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+}
+//-------------------------------------------------------------------------------------------------------------------------------------------//
+function OnRunScriptKeyPress(nFile, nRecord, nNumber, nValue, nFlag)
+
+{
+	if (nNumber == 75)
+	{
+		
+			local nInput = ICR_GetNumberDialog("Enter petty cash value", 0, false); //Enter Petty Cash value
+			print ("petty cash being put in drawer -----> £" + nInput);//print for debug
+			local nTabInDisplay = format("%0.2f",nInput.tofloat()/100)	// creating the current amount and shifting the decimal over
+			
+			if(nInput == 0)
+				{
+					ICR_MessageBox("Invalid amount entered!","Cancelling transaction","",0) // cancelling
+					return false)
+				}
+			else
+				{
+					local nContinue = ICR_MessageBox("Are you entering £"+nTabInDisplay+" in petty cash?","","",1) // confirming the topup amount
+					if (nContinue == 1) //if they want to continue		   
+						{
+							ICR_SetInput(nInput)
+							ICR_KeyPress(52, 20) //Press Petty Cash
+						}
+			else
+				{
+					return false;
+				}
+		}
+	}
+		else
+		{
+		return false
+		}
+	}

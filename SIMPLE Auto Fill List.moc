@@ -1,0 +1,65 @@
+﻿local bDebugPrinting = true;	// set this false to disable all the debug printing in the output file
+
+local aRay = []; //create an empty array
+
+function OnInit()
+{
+    ICR_EnableDebugLog(bDebugPrinting);
+    ICR_SetFeature("CONSOLE",bDebugPrinting);
+    ICR_SetFeature("AUTORESTART",bDebugPrinting);
+	
+}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function OnRunScriptKeyPress (nFile, nRecord, nNumber, nValue, nFlag)
+	{
+		if(nNumber == 30) //If our key
+			{
+				local pPGM = ICR_GetPGMData(399,1); //Get PLU Maximum data
+				local pMax = pPGM.SIZE //Get Maximim file size
+	
+				aRay.clear() //Clear array of data
+				
+				for(local nNumb = 1; nNumb < pMax; nNumb++) //count from 1 to max file size minus 1
+					{
+						local nPGM = ICR_GetPGMData(1,nNumb) //Get each PLU's data
+						local pName = nPGM.NAME // Get each PLU's Name
+						local pDept = nPGM.DEPT // Get each PLU's Department
+						
+						if(pDept == 61) //If messges
+							{
+								if(pName != "*") //if PLU isn't called *
+									{
+										print("PLU Number = "+nNumb) 
+										aRay.push(pName) //add name to array
+										aRay.push(nNumb) //add PLU record to array
+									}
+							}
+					}
+					foreach(idx , val in aRay) //for each value in array
+						{
+							print("TABLE: idx = " +idx+ " // Record = "+val)
+						}
+						
+						local rLength = aRay.len() //length of array
+						print("Array length = "+rLength)
+							
+					ICR_ListDialog_AddItem(aRay[0],true); //first entry in list
+					
+					for(local nCount = 1; nCount <= ((rLength-1)/2); nCount++) //count up to length of array
+						{
+							ICR_ListDialog_AddItem(aRay[2*nCount]); //add next entry in list (even numbers array)
+						}
+				local nResult = ICR_ListDialog("Messages"); //Name of list
+				
+				if(nResult != 0) //if result isn't 0
+					{
+						print("RESULT ===== "+nResult)
+						local ePLU = aRay[(2*nResult-1)] //odd numbers
+						print("PLU should equal number "+ePLU)
+						ICR_KeyPress(1,ePLU) //press my PLU
+						return true;
+					}				
+			}
+	}

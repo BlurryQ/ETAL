@@ -1,0 +1,28 @@
+local bDebugPrinting = false;	//  debug printing is a yes :)
+//-------------------------------------------------------------------------------------------------------------------------------------------//
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+}
+//-------------------------------------------------------------------------------------------------------------------------------------------//
+function BeforeKeyPress(nFile, nRecord, nNumber)
+
+{
+	if (nFile == 52 && nRecord == 10) //if out discount keys
+		{
+			local nInput = ICR_GetNumberDialog("Enter Value", 0, false); //Enter Voucher value
+			ICR_SetInput(nInput)
+		}
+	if (nFile == 52 && nRecord == 12) //if out discount keys
+		{
+			local nInput = ICR_GetNumberDialog("Enter Value", 0, false); //Enter Voucher value
+			ICR_SetInput(nInput)
+		}
+	else
+		{
+			return true
+		}
+	}

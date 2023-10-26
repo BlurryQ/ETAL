@@ -1,0 +1,22 @@
+local bDebugPrinting = true;	// set this false to disable all the debug printing in the output file
+
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+}
+///////////////////////////////////////////
+
+function BeforeKeyPress(nFile, nRecord, nKeyType)
+{
+	if(nFile == 53 && nRecord == 240) //If Floorplan Button Pressed
+		{
+		ICR_MessageBox ("Have you offered any", "cocktails or coffee?", "UPSELL",0) //Upsell Message
+		}
+	else
+		{
+		return true;
+		}
+}

@@ -1,0 +1,552 @@
+﻿local bDebugPrinting = false;	// set this false to disable all the debug printing in the output file
+
+dofile("etal\\lib\\strings.moc"); // Load Strings from lib (centreDBLtext)
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function OnInit()
+	{
+		ICR_EnableDebugLog(true);	
+		ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+		ICR_SetFeature("CONSOLE",bDebugPrinting);
+		ICR_SetFeature("AUTORESTART",bDebugPrinting);
+		
+		ICR_SetLocalUserData("ENABLED",true,true) //set script setting OFF
+		ICR_SetLocalUserData("PRINT", 0) //set print setting OFF
+		
+		ICR_SetLocalUserData("CNAME"," ") //set customer name
+		ICR_SetLocalUserData("NCREDIT",0) //set credit value
+		
+		ICR_SetLocalUserData("DEVICE",0) //set device number
+		ICR_SetLocalUserData("COMS",1) //set port number
+		
+		ICR_SetLocalUserData("NCONSEC",0) //set consec number
+	}
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function BeforeKeyPress(nFile, nRecord, nKeytype)
+	{
+		if(nFile == 51 && nRecord != 18) //if any finalise key except credit note
+			{
+				local nEnable = ICR_GetLocalUserData("ENABLED") //get script setting
+				if(nEnable == true) //if script enabled
+					{						
+						local cBuff = ICR_GetClerkBuffer_Index() //get clerk buffer
+						local nTotal = -(cBuff.THISSALETOTAL) // get negative sale total (refunds)
+						
+						local tPrinter = ICR_GetPGMData(304,1) //get printer 1 settings
+						local pCOMS = tPrinter.DEVICE1MC //device connected to
+						local pPort = tPrinter.DEVICE1PORT //com port
+						print("Thermal is connected to " + pCOMS + " on port " + pPort)
+						ICR_SetLocalUserData("DEVICE",pCOMS) //set device number
+						ICR_SetLocalUserData("COMS",pPort) //set port number
+						local nPrint = ICR_GetLocalUserData("PRINT") //get print setting
+						local nConsec = ICR_GetLocalUserData("NCONSEC") //get consec number
+												
+						local nMode = ICR_GetCurrentMode() //get current mode
+						switch(nMode)
+							{
+								case 1: // if sales mode
+										break;
+								case 3: // if refund mode
+										if(nConsec == 0) //if no consec number entered yet
+											{
+												local nConsec = ICR_GetAlphaDialog("Original consec number?",10,true) //get consec number
+												local cName = ICR_GetAlphaDialog("Customer name?",40,true) //get customers name
+												print("Customers name is "+cName + " // Consec number is " + nConsec)
+												local nDisplay = format("%0.2f",nTotal.tofloat()/100)	// creating the current amount and shifting the decimal over
+												local nResult = ICR_MessageBox("You are refunding " + cName + "","from consec number " + nConsec,"CONFIRM",1) //confirming
+												if(nResult == 1) //if yes
+													{
+														ICR_SetLocalUserData("NCONSEC",nConsec) //set consec number
+														ICR_SetLocalUserData("CNAME",cName) //set customer name
+														ICR_SetLocalUserData("NCREDIT",nDisplay) //set credit value
+													}
+												else
+													{
+														return false;
+													}
+											}
+										if(nPrint == 30) //if this is part credit note
+											{
+												return true;
+											}
+										else
+											{
+												ICR_SetLocalUserData("PRINT",nMode) //set print setting
+											}
+										break;
+							}
+					}
+				else
+					{
+						return true;
+					}
+			}
+		if(nFile == 51 && nRecord == 18) //if it's the credit note key
+			{
+				local nEnable = ICR_GetLocalUserData("ENABLED") //get script setting
+				if(nEnable == true) //if script enabled
+					{
+						local cBuff = ICR_GetClerkBuffer_Index() //get clerk buffer
+						local nTotal = -(cBuff.THISSALETOTAL) // get negative sale total (refunds)
+						local sTotal = cBuff.THISSALETOTAL // get sale total
+						local nSub = cBuff.SUBTOTAL // get subtotal
+						local tPrinter = ICR_GetPGMData(304,1) //get printer 1 settings
+						local pCOMS = tPrinter.DEVICE1MC //get device connected to
+						local pPort = tPrinter.DEVICE1PORT //get port number
+						print("Thermal is connected to " + pCOMS + " on port " + pPort)
+						ICR_SetLocalUserData("DEVICE",pCOMS) //set device number
+						ICR_SetLocalUserData("COMS",pPort) //set port number
+						local nConsec = ICR_GetLocalUserData("NCONSEC") //get consec number
+						
+						local tPrinterCheck = ICR_DeviceStatus(pCOMS,pPort);
+						if (tPrinterCheck == false)
+							{
+								ICR_Sound(2);
+								ICR_MessageBox("Problem with thermal printer","Please check and try again","",0);
+								return false;	
+							}
+						
+						local nMode = ICR_GetCurrentMode() //get current mode
+						switch(nMode)
+							{
+								case 1:	//if sales mode
+										local nConsec = ICR_GetAlphaDialog("Original consec number?",10,true) //get consec number
+										ICR_SetLocalUserData("NCONSEC",nConsec) //set consec number
+										local nValue = ICR_GetNumberDialog("Value of credit note?",0) //get amount to charge credit note
+										ICR_SetLocalUserData("PRINT",10) //set print credit note
+										ICR_SetInput(nValue)
+										if(nValue > nSub) //if original credit note is more than current total
+											{
+												local cName = ICR_GetAlphaDialog("Customer name?",40,true) //get customers name
+												print("Customers name is "+cName + " // Consec number is " + nConsec)
+												local nCredit = nValue - nSub //calculate credit note value
+												local nDisplay = format("%0.2f",nCredit.tofloat()/100)	// creating the current amount and shifting the decimal over
+												print("Credit note value is £" + nDisplay)
+												local nResult = ICR_MessageBox("You are creating a credit note from " + nConsec + " to","" + cName + " totaling £" + nDisplay + "","CONFIRM",1) //confirming
+												if(nResult == 1) //if yes
+													{		
+														ICR_SetLocalUserData("NCONSEC",nConsec) //set consec number
+														ICR_SetLocalUserData("CNAME",cName) //set customer name
+														ICR_SetLocalUserData("NCREDIT",nDisplay) //set credit value
+														ICR_SetLocalUserData("PRINT",11) //set print credit note
+													}
+												else
+													{
+														return false; 
+													}
+											}
+										break;
+								case 3: //if refund
+										if(nConsec == 0) //if no consec number entered
+											{
+												local nConsec = ICR_GetAlphaDialog("Original consec number?",10,true) //get consec number
+												local cName = ICR_GetAlphaDialog("Customer name?",40,true) //get customers name
+												print("Customers name is "+cName + " // Consec number is " + nConsec)
+												local nCredit = ICR_GetNumberDialog("Value of credit note?",nTotal) //input for credit note value
+												local nDisplay = format("%0.2f",nCredit.tofloat()/100)	// creating the current amount and shifting the decimal over
+												print("Credit note value is £" + nDisplay)
+												local nResult = ICR_MessageBox("You are creating a credit note for","" + cName + " totaling £" + nDisplay + "","CONFIRM",1) //confirming
+												if(nResult == 1)
+													{		
+														ICR_SetLocalUserData("NCONSEC",nConsec) //set consec number
+														ICR_SetLocalUserData("CNAME",cName) //set customer name
+														ICR_SetLocalUserData("NCREDIT",nDisplay) //set credit value
+														ICR_SetLocalUserData("PRINT",30) //set print credit note																						
+													}
+												else
+													{
+														return false;
+													}
+												ICR_SetInput(nDisplay);
+											}
+										else
+											{
+														local nConsec = ICR_GetLocalUserData("NCONSEC") //get consec number
+														local cName = ICR_GetLocalUserData("CNAME") //get customer name
+														local nDisplay = ICR_GetLocalUserData("NCREDIT") //get credit value
+														local cBuff = ICR_GetClerkBuffer_Index() //get clerk buffer
+														local nSub = -(cBuff.SUBTOTAL) // get negative sub total
+														local nDisplay = format("%0.2f",nSub.tofloat()/100)	// creating the current amount and shifting the decimal over
+														local nResult = ICR_MessageBox("You are creating a credit note for","" + cName + " totaling £" + nDisplay + "","CONFIRM",1) //confirming
+														if(nResult == 1)
+															{		
+																ICR_SetLocalUserData("NCREDIT",nDisplay) //set credit value
+																ICR_SetLocalUserData("PRINT",30) //set print credit note																		
+															}
+														else
+															{
+																return false;
+															}
+														
+											}
+							}				
+					}
+				else
+					{
+						local nInput = ICR_GetNumberDialog("Enter amount to process",0) //enter amount to charge
+						if(nInput == 0) //if amount entered is 0
+							{
+								ICR_Sound(2) //error noise
+								ICR_SetInput_Message("Enforced Amount Tend") //error message
+								return false;
+							}
+						ICR_SetInput(nInput)
+						return true;
+					}
+			}
+		else
+			{
+				return true;
+			}
+	}
+	
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function PreSaleFinalised()
+	{
+		local nEnable = ICR_GetLocalUserData("ENABLED") //get script setting
+		if(nEnable == true) //if script is enabled
+			{
+				local nConsec = ICR_GetLocalUserData("NCONSEC") //get consec number
+				local cName = ICR_GetLocalUserData("CNAME") //get customer name
+				local nCredit = ICR_GetLocalUserData("NCREDIT") //get credit value
+				local pCOMS = ICR_GetLocalUserData("DEVICE") //get device number
+				local pPort = ICR_GetLocalUserData("COMS") //get port number			
+				local tPrint = ICR_GetLocalUserData("PRINT") //get print setting
+				
+				switch(tPrint)
+					{
+						case 1: 
+								ICR_SetLocalUserData("PRINT",0) //turn printing off
+								ICR_SetLocalUserData("NCONSEC",0) //set consec number
+								ICR_SetLocalUserData("CNAME"," ") //set customer name
+								ICR_SetLocalUserData("NCREDIT",0) //set credit value	
+								break;
+						case 3:
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine("ORIGINAL CONSEC NUMBER: " + nConsec + "", 0, 0, 0, 100, 0); // print total line
+								ICR_JournalLine("ORIGINAL CONSEC NUMBER: " + nConsec + "", 0, 0, 0, 100, 0); // journal total line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine("REASON FOR RETURN: ", 0, 0, 0, 100, 0); // print total line
+								ICR_JournalLine("REASON FOR RETURN: ", 0, 0, 0, 100, 0); // journal total line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine("_____________________________________________", 0, 0, 0, 100, 0); // print underscore line
+								ICR_JournalLine("_____________________________________________", 0, 0, 0, 100, 0); // journal underscore line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine("MANAGER'S NAME: ", 0, 0, 0, 100, 0); // print total line
+								ICR_JournalLine("MANAGER'S NAME: ", 0, 0, 0, 100, 0); // journal total line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine("_____________________________________________", 0, 0, 0, 100, 0); // print underscore line
+								ICR_JournalLine("_____________________________________________", 0, 0, 0, 100, 0); // journal underscore line	
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine("SIGNED BY MANAGER: ", 0, 0, 0, 100, 0); // print total line
+								ICR_JournalLine("SIGNED BY MANAGER: ", 0, 0, 0, 100, 0); // journal total line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine("_____________________________________________", 0, 0, 0, 100, 0); // print underscore line
+								ICR_JournalLine("_____________________________________________", 0, 0, 0, 100, 0); // journal underscore line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine("CUSTOMER NAME: "+cName, 0, 0, 0, 100, 0); // print total line
+								ICR_JournalLine("CUSTOMER NAME: "+cName, 0, 0, 0, 100, 0); // journal total line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine("CUSTOMER ADDRESS: ", 0, 0, 0, 100, 0); // print total line
+								ICR_JournalLine("CUSTOMER ADDRESS: ", 0, 0, 0, 100, 0); // journal total line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine("SIGNED BY CUSTOMER: ", 0, 0, 0, 100, 0); // print total line
+								ICR_JournalLine("SIGNED BY CUSTOMER: ", 0, 0, 0, 100, 0); // journal total line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine("_____________________________________________", 0, 0, 0, 100, 0); // print underscore line
+								ICR_JournalLine("_____________________________________________", 0, 0, 0, 100, 0); // journal underscore line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								
+								ICR_SetLocalUserData("PRINT",0) //turn printing off
+								ICR_SetLocalUserData("NCONSEC",0) //set consec number
+								ICR_SetLocalUserData("CNAME"," ") //set customer name
+								ICR_SetLocalUserData("NCREDIT",0) //set credit value								
+								break;
+						case 10:
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine("ORIGINAL CONSEC NUMBER: " + nConsec + "", 0, 0, 0, 100, 0); // print total line
+								ICR_JournalLine("ORIGINAL CONSEC NUMBER: " + nConsec + "", 0, 0, 0, 100, 0); // journal total line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								
+								ICR_SetLocalUserData("PRINT",0) //turn printing off
+								ICR_SetLocalUserData("NCONSEC",0) //set consec number
+								ICR_SetLocalUserData("CNAME"," ") //set customer name
+								ICR_SetLocalUserData("NCREDIT",0) //set credit value
+								
+								break;
+						case 11:
+								local sHeading = CenterDBLText("CREDIT NOTE = £"+nCredit+"") //create centred line
+								local qHeading = CenterDBLText("CREDIT REMAINING = £"+nCredit+"") //create centred line
+								local cHeading = CenterDBLText("ORIGINAL CONSEC NUMBER: "+nConsec+"") //create centred line
+								
+								local Line1 = CenterDBLText("This credit note has been issued to") //create centred line
+								local Line2 = CenterDBLText(cName) //create centred line
+								local Line3 = CenterDBLText("and has a total value of") //create centred line
+								local Line4 = CenterDBLText("£"+nCredit) //create centred line									
+																
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line	
+								ICR_ReceiptLine("........................................", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine("........................................", 0, 0, 0, 100, 0); // journal blank line																
+								ICR_ReceiptLine(qHeading, 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(qHeading, 0, 0, 0, 100, 0); // journal blank line	
+								ICR_ReceiptLine(cHeading, 0, 0, 0, 100, 0); // print total line
+								ICR_JournalLine(cHeading, 0, 0, 0, 100, 0); // journal total line
+								ICR_ReceiptLine("........................................", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine("........................................", 0, 0, 0, 100, 0); // journal blank line																
+								ICR_ReceiptLine(Line1, 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(Line1, 0, 0, 0, 100, 0); // journal blank line	
+								ICR_ReceiptLine(Line2, 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(Line2, 0, 0, 0, 100, 0); // journal blank line	
+								ICR_ReceiptLine(Line3, 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(Line3, 0, 0, 0, 100, 0); // journal blank line	
+								ICR_ReceiptLine(Line4, 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(Line4, 0, 0, 0, 100, 0); // journal blank line	
+								ICR_ReceiptLine("........................................", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine("........................................", 0, 0, 0, 100, 0); // journal blank line	
+																
+								local nLogo1 = ICR_GetPGMData (32,1); // get receipt line 1
+								local nLogo2 = ICR_GetPGMData (32,2); //get receipt line 2
+								local nLogo3 = ICR_GetPGMData (32,3); //get receipt line 3
+								local nLogo4 = ICR_GetPGMData (32,4); //get receipt line 4
+								local nLogo9 = ICR_GetPGMData (32,9); //get receipt line 9
+								local nLogo10 = ICR_GetPGMData (32,10); //get receipt line 10
+								local nLogo11 = ICR_GetPGMData (32,11); //get receipt line 11
+								local nLogo12 = ICR_GetPGMData (32,12); //get receipt line 12							
+													
+								local tLogo1 = CenterDBLText(nLogo1.TEXT) //centre receipt header
+								local tLogo2 = CenterDBLText(nLogo2.TEXT) //centre receipt header
+								local tLogo3 = CenterDBLText(nLogo3.TEXT) //centre receipt header
+								local tLogo4 = CenterDBLText(nLogo4.TEXT) //centre receipt header
+								local bLogo1 = CenterDBLText(nLogo9.TEXT) //centre receipt bottom message
+								local bLogo2 = CenterDBLText(nLogo10.TEXT) //centre receipt bottom message
+								local bLogo3 = CenterDBLText(nLogo11.TEXT) //centre receipt bottom message
+								local bLogo4 = CenterDBLText(nLogo12.TEXT) //centre receipt bottom message
+																
+								ICR_OutputLine(tLogo1,pCOMS,pPort); //first receipt line on new receipt
+								ICR_OutputLine(tLogo2,pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(tLogo3,pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(tLogo4,pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(" ",pCOMS,pPort); //blank line
+								ICR_OutputLine(cHeading,pCOMS,pPort); //next line on receipt			
+								ICR_OutputLine(" ",pCOMS,pPort); //blank line
+								ICR_OutputLine("........................................",pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(sHeading,pCOMS,pPort); //next line on receipt
+								ICR_OutputLine("........................................",pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(" ",pCOMS,pPort); //blank line
+								ICR_OutputLine(Line1,pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(Line2,pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(Line3,pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(Line4,pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(" ",pCOMS,pPort); //blank line
+								ICR_OutputLine("........................................",pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(" ",pCOMS,pPort); //blank line
+								ICR_OutputLine("STAFF NAME:",pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(" ",pCOMS,pPort); //blank line
+								ICR_OutputLine("_____________________________________________:",pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(" ",pCOMS,pPort); //blank line
+								ICR_OutputLine("SIGNED:",pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(" ",pCOMS,pPort); //blank line
+								ICR_OutputLine("_____________________________________________:",pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(" ",pCOMS,pPort); //blank line
+								ICR_OutputLine(bLogo1,pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(bLogo2,pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(bLogo3,pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(bLogo4,pCOMS,pPort); //next line on receipt
+								ICR_EndPrinting(pCOMS,pPort); //end/ cut new receipt	
+
+								ICR_SetLocalUserData("PRINT",0) //turn printing off
+								ICR_SetLocalUserData("NCONSEC",0) //set consec number
+								ICR_SetLocalUserData("CNAME"," ") //set customer name
+								ICR_SetLocalUserData("NCREDIT",0) //set credit value	
+								break;
+						case 30:
+													
+								local sHeading = CenterDBLText("CREDIT NOTE = £"+nCredit+"") //create centred line
+								local cHeading = CenterDBLText("ORIGINAL CONSEC NUMBER: "+nConsec+"") //create centred line
+								local Line1 = CenterDBLText("This credit note has been issued to") //create centred line
+								local Line2 = CenterDBLText(cName) //create centred line
+								local Line3 = CenterDBLText("and has a total value of") //create centred line
+								local Line4 = CenterDBLText("£"+nCredit) //create centred line													
+																
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line	
+								ICR_ReceiptLine("........................................", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine("........................................", 0, 0, 0, 100, 0); // journal blank line																
+								ICR_ReceiptLine(sHeading, 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(sHeading, 0, 0, 0, 100, 0); // journal blank line	
+								ICR_ReceiptLine("........................................", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine("........................................", 0, 0, 0, 100, 0); // journal blank line									
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine("ORIGINAL CONSEC NUMBER: " + nConsec + "", 0, 0, 0, 100, 0); // print total line
+								ICR_JournalLine("ORIGINAL CONSEC NUMBER: " + nConsec + "", 0, 0, 0, 100, 0); // journal total line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine("REASON FOR RETURN: ", 0, 0, 0, 100, 0); // print total line
+								ICR_JournalLine("REASON FOR RETURN: ", 0, 0, 0, 100, 0); // journal total line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine("_____________________________________________", 0, 0, 0, 100, 0); // print underscore line
+								ICR_JournalLine("_____________________________________________", 0, 0, 0, 100, 0); // journal underscore line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine("MANAGER'S NAME: ", 0, 0, 0, 100, 0); // print total line
+								ICR_JournalLine("MANAGER'S NAME: ", 0, 0, 0, 100, 0); // journal total line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine("_____________________________________________", 0, 0, 0, 100, 0); // print underscore line
+								ICR_JournalLine("_____________________________________________", 0, 0, 0, 100, 0); // journal underscore line	
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine("SIGNED BY MANAGER: ", 0, 0, 0, 100, 0); // print total line
+								ICR_JournalLine("SIGNED BY MANAGER: ", 0, 0, 0, 100, 0); // journal total line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine("_____________________________________________", 0, 0, 0, 100, 0); // print underscore line
+								ICR_JournalLine("_____________________________________________", 0, 0, 0, 100, 0); // journal underscore line																		
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine("CUSTOMER NAME: "+cName+"", 0, 0, 0, 100, 0); // print total line
+								ICR_JournalLine("CUSTOMER NAME: "+cName+"", 0, 0, 0, 100, 0); // journal total line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine("CUSTOMER ADDRESS: ", 0, 0, 0, 100, 0); // print total line
+								ICR_JournalLine("CUSTOMER ADDRESS: ", 0, 0, 0, 100, 0); // journal total line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine("SIGNED BY CUSTOMER: ", 0, 0, 0, 100, 0); // print total line
+								ICR_JournalLine("SIGNED BY CUSTOMER: ", 0, 0, 0, 100, 0); // journal total line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								ICR_ReceiptLine("_____________________________________________", 0, 0, 0, 100, 0); // print underscore line
+								ICR_JournalLine("_____________________________________________", 0, 0, 0, 100, 0); // journal underscore line
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line
+								
+								ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(" ", 0, 0, 0, 100, 0); // journal blank line	
+								ICR_ReceiptLine("........................................", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine("........................................", 0, 0, 0, 100, 0); // journal blank line																
+								ICR_ReceiptLine(Line1, 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(Line1, 0, 0, 0, 100, 0); // journal blank line	
+								ICR_ReceiptLine(Line2, 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(Line2, 0, 0, 0, 100, 0); // journal blank line	
+								ICR_ReceiptLine(Line3, 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(Line3, 0, 0, 0, 100, 0); // journal blank line	
+								ICR_ReceiptLine(Line4, 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine(Line4, 0, 0, 0, 100, 0); // journal blank line	
+								ICR_ReceiptLine("........................................", 0, 0, 0, 100, 0); // print blank line
+								ICR_JournalLine("........................................", 0, 0, 0, 100, 0); // journal blank line		
+								
+								local nLogo1 = ICR_GetPGMData (32,1); // get receipt line 1
+								local nLogo2 = ICR_GetPGMData (32,2); //get receipt line 2
+								local nLogo3 = ICR_GetPGMData (32,3); //get receipt line 3
+								local nLogo4 = ICR_GetPGMData (32,4); //get receipt line 4
+								local nLogo9 = ICR_GetPGMData (32,9); //get receipt line 9
+								local nLogo10 = ICR_GetPGMData (32,10); //get receipt line 10
+								local nLogo11 = ICR_GetPGMData (32,11); //get receipt line 11
+								local nLogo12 = ICR_GetPGMData (32,12); //get receipt line 12							
+													
+								local tLogo1 = CenterDBLText(nLogo1.TEXT) //centre receipt header
+								local tLogo2 = CenterDBLText(nLogo2.TEXT) //centre receipt header
+								local tLogo3 = CenterDBLText(nLogo3.TEXT) //centre receipt header
+								local tLogo4 = CenterDBLText(nLogo4.TEXT) //centre receipt header
+								local bLogo1 = CenterDBLText(nLogo9.TEXT) //centre receipt bottom message
+								local bLogo2 = CenterDBLText(nLogo10.TEXT) //centre receipt bottom message
+								local bLogo3 = CenterDBLText(nLogo11.TEXT) //centre receipt bottom message
+								local bLogo4 = CenterDBLText(nLogo12.TEXT) //centre receipt bottom message
+																
+								ICR_OutputLine(tLogo1,pCOMS,pPort); //first receipt line on new receipt
+								ICR_OutputLine(tLogo2,pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(tLogo3,pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(tLogo4,pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(" ",pCOMS,pPort); //blank line
+								ICR_OutputLine(cHeading,pCOMS,pPort);  //next line on receipt							
+								ICR_OutputLine(" ",pCOMS,pPort); //blank line
+								ICR_OutputLine("........................................",pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(sHeading,pCOMS,pPort); //next line on receipt
+								ICR_OutputLine("........................................",pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(" ",pCOMS,pPort); //blank line
+								ICR_OutputLine(Line1,pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(Line2,pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(Line3,pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(Line4,pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(" ",pCOMS,pPort); //blank line
+								ICR_OutputLine("........................................",pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(" ",pCOMS,pPort); //blank line
+								ICR_OutputLine("MANAGER'S NAME:",pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(" ",pCOMS,pPort); //blank line
+								ICR_OutputLine("_____________________________________________:",pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(" ",pCOMS,pPort); //blank line
+								ICR_OutputLine("SIGNED BY MANAGER:",pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(" ",pCOMS,pPort); //blank line
+								ICR_OutputLine("_____________________________________________:",pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(" ",pCOMS,pPort);
+								ICR_OutputLine(bLogo1,pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(bLogo2,pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(bLogo3,pCOMS,pPort); //next line on receipt
+								ICR_OutputLine(bLogo4,pCOMS,pPort); //next line on receipt
+								ICR_EndPrinting(pCOMS,pPort);	//end/ cut new receipt			
+
+								ICR_SetLocalUserData("PRINT",0) //turn printing off
+								ICR_SetLocalUserData("NCONSEC",0) //set consec number
+								ICR_SetLocalUserData("CNAME"," ") //set customer name
+								ICR_SetLocalUserData("NCREDIT",0) //set credit value								
+								break;										
+					}
+			}
+	}
+	
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+		
+function OnEnterPGMMenu(nSub) // When entering PGM 3
+	{
+		ICR_PurgeProgramSettings(); // Clear settings and repull data
+		switch(nSub)
+			{
+				case 0: // System settings
+					ICR_AdvertiseProgramSetting("Script Details", "SCRIPTVERINF"); // Show script info		
+					ICR_AdvertiseProgramSetting("Enable info on receipts", "ENABLED");  // enable script
+					break;
+				default: 
+					ICR_AdvertiseProgramHeading("This menu doesn't exist"); // If they break my menus
+					break; // Stop
+			}
+	}

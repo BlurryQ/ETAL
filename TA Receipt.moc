@@ -1,0 +1,59 @@
+﻿
+local bDebugPrinting = true;	// Set this false to disable all the debug printing in the output file
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function OnInit()
+
+	{
+		ICR_EnableDebugLog(bDebugPrinting);	
+		ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+		ICR_SetFeature("CONSOLE",bDebugPrinting);
+		ICR_SetFeature("AUTORESTART",bDebugPrinting);
+		
+		ICR_SetLocalUserData("TAReceipt", false) //set receipts off
+	}
+	
+	
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function BeforeKeyPress(nFile, nRecord, nNumber)
+	{
+		if(nFile == 51)
+			{
+				local tClerkBuff = ICR_GetClerkBuffer_Index();
+				local cEITA = tClerkBuff.EATINTAKEOUT
+				print("Sale is = " + cEITA)			
+			
+				if(cEITA == 274)
+					{
+						ICR_SetLocalUserData("TAReceipt", true) //set receipts on
+						local tSysData = ICR_GetSystemData(); 
+						if (tSysData.RECEIPTON == false) // IF RECEIPT IS OFF
+							{
+								ICR_KeyPress(53,231); // TURN IT ON
+							}
+					}
+			}
+		else
+			{
+				return true;
+			}
+	}
+	
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function AfterSignOn (nClerk)
+	{
+		local TAReceipt = ICR_GetLocalUserData("TAReceipt") //get receipt setting
+		
+		if(TAReceipt == true) //if receipts on
+			{
+				ICR_KeyPress(53,231); // TURN IT OFF
+				ICR_SetLocalUserData("TAReceipt", false) //set receipts off
+			}
+		else
+			{
+				return true;
+			}
+	}

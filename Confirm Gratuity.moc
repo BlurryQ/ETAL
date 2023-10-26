@@ -1,0 +1,46 @@
+﻿local bDebugPrinting = false;	// set this false to disable all the debug printing in the output file
+
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------*/
+function OnInit()
+	{
+		ICR_EnableDebugLog(true);	
+		ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+		ICR_SetFeature("CONSOLE",bDebugPrinting);
+		ICR_SetFeature("AUTORESTART",bDebugPrinting);
+
+	}
+/*-------------------------------------------------------------------------------------------------------------------------------------------*/
+
+
+function BeforeKeyPress(nFile,nRecord,nKeyType)
+	{
+		if (nFile == 52 && nRecord == 14) //Deposit in
+			{
+				local nAmount = ICR_GetNumberDialog("Enter gratuity amount",0,false); //keypad to enter desired amount
+				print ("Gratuity customer is paying -----> £" + nAmount);//print for debug
+					if(nAmount == 0)
+						{
+							ICR_Sound(2) //Error Noise
+							ICR_MessageBox("Value cannot equal £0!","Cancelling.","X",0) 
+							return false;
+						}
+					else
+						{	
+							local nDisplay = format("%0.2f",nAmount.tofloat()/100)	// creating the current amount and shifting the decimal over
+							local nContinue = ICR_MessageBox("Gratuity entered is "+nDisplay+"","Is this correct?","",1) // confirming the amount
+							if (nContinue == 1) //if they want to continue		   
+							   {
+									ICR_SetInput(nAmount); // Put amount into buffer
+									//ICR_KeyPress(52,14); // enter gratuity
+								}
+							else
+								{
+									return false;
+								}
+						
+						}		
+			}
+	}
+			
+			

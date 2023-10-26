@@ -1,0 +1,25 @@
+local bDebugPrinting = true;	// set this false to disable all the debug printing in the output file
+
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+}
+
+/*----------------------------------------------------------*/
+
+function AfterSignOn(nclerk)
+{
+   local tClerk = ICR_GetPGMData(5,nclerk); //Check clerk flags
+   if (!(tClerk.OPERATION & 0x0008)) //Check if manager
+   { 
+       return false;
+   }
+else
+	{
+		local tbCID = ICR_GetSalesData (50, 4, 1); //Get cash in drawer value
+		ICR_MessageBox("Cash In Drawer", "Total: £" + tbCID.VALUE /100, "CID", 0); //display cash in drawer to nearest £
+	}
+}

@@ -1,0 +1,33 @@
+local bDebugPrinting = false;	//  debug printing is a yes :)
+//-------------------------------------------------------------------------------------------------------------------------------------------//
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+}
+//-------------------------------------------------------------------------------------------------------------------------------------------//
+function BeforeKeyPress(nFile,nRecord,nKeyType)
+{
+	if(nFile == 53 && nRecord == 192) //If subtotal button pressed
+	{
+		local tClerkBuffer = ICR_GetClerkBuffer_Index(); //Get sale info
+		local nTotal = (tClerkBuffer.THISSALETOTAL);
+		local nTotVal = format("%0.2f",nTotal.tofloat()/100)	// creating the current amount and shifting the decimal over
+		
+		local nCoC = ICR_MessageBox("This sale totals £"+nTotVal+"?","Is the customer paying in cash?","",1) // confirming the topup amount
+
+		
+		if (nCoC == 1) //If yes
+			{
+				local nTender = ICR_GetNumberDialog("Enter Amount Tendered", 0, false); //Enter amount to tender
+				ICR_SetInput(nTender)
+				ICR_KeyPress(51, 1) //Press cash
+			}
+		else //If no
+			{
+				return false //Do nothing 
+			}
+	}
+}

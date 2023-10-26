@@ -1,0 +1,37 @@
+﻿local bDebugPrinting = false;	// set this false to disable all the debug printing in the output file
+
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------*/
+function OnInit()
+	{
+		ICR_EnableDebugLog(true);	
+		ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+		ICR_SetFeature("CONSOLE",bDebugPrinting);
+		ICR_SetFeature("AUTORESTART",bDebugPrinting);
+
+	}
+/*-------------------------------------------------------------------------------------------------------------------------------------------*/
+
+
+function BeforeKeyPress(nFile,nRecord,nKeyType)
+	{
+		if (nFile == 51 && (nRecord == 1 || nRecord == 5 || nRecord == 6 || nRecord == 7 || nRecord == 12 || nRecord == 3) || (nFile == 52 && nRecord == 15)) //if any payment key or voucher
+			{
+				local pressedKeyInfo = ICR_GetPGMData(nFile, nRecord)
+				local confirmKeyPress = ICR_MessageBox("You have pressed " + pressedKeyInfo.NAME + "", "Have you pressed the correct key?","",1)
+				if (confirmKeyPress)
+					{
+						return true;
+					}
+				else
+					{
+						return false;
+					}
+			}
+		else
+			{
+				return true;
+			}
+	}
+			
+			

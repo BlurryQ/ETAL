@@ -1,0 +1,44 @@
+local bDebugPrinting = false;	//  debug printing is a yes :)
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------*/
+
+dofile("etal\\lib\\keys.moc"); // Load Keys from lib (auto crate key)
+
+function OnInit()
+{
+
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+ICR_SetLocalUserData("BILL",0)
+
+local sSub = CheckForKey( { NAME = "SUB TOTAL" , MATCHNAME = true, FILE = 53, KEYTYPE = 6, MATCHNAME = true} ); //Create STS key
+print("Sub Total STS key is record "+sSub)
+ICR_SetLocalUserData("SUBTOTAL",sSub)
+}
+
+
+/*------------------------------------------------------------------------------------------------------------------------------------------*/	
+function AfterKeyPress(nFile, nRecord, nKeytype)
+
+	{
+		local sSub = ICR_GetLocalUserData("SUBTOTAL") //get subtotal record number
+			if(nFile == 53 && nRecord == sSub) //if subtotal
+				{
+					local nDate = date() //get date
+					local nYear = nDate.year //get year
+					if(nYear == 2020) //if 2020
+						{
+							local nMonth = nDate.month //get month
+							if(nMonth == 11) //if november
+								{
+									local nDay = nDate.wday //get day
+									if(nDay == 1 || nDay == 2 || nDay == 3) //if Monday - Wednesday
+										{
+											ICR_KeyPress(52,18) //50% discount
+										}
+								}
+						}
+				}
+	}

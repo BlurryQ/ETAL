@@ -1,0 +1,29 @@
+﻿
+local bDebugPrinting = false;	// Set this false to disable all the debug printing in the output file
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function OnInit()
+	{
+		ICR_EnableDebugLog(bDebugPrinting);	
+		ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+		ICR_SetFeature("CONSOLE",bDebugPrinting);
+		ICR_SetFeature("AUTORESTART",bDebugPrinting);	
+	}
+	
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function AfterKeyPress(nFile, nRecord, nKeytype) {
+	if(nFile == 1) {
+		local clerkBuffer = ICR_GetClerkBuffer_Index();
+		local getPLUData = ICR_GetPGMData(1,nRecord)
+		local ticketPrinting = getPLUData.KPFLAG
+		if((ticketPrinting - 8192) >= 0) {	//if ticket printer 1 is on
+			ICR_SetInput(1)
+			ICR_KeyPress(53,261) // press customer
+			local customerName = ICR_GetAlphaDialog("Please enter customer name");
+			local customerTable = { };
+			customerTable.FIRSTNAME <- customerName;	
+			ICR_SetPGMData(260, 1, customerTable);	} //push name to customer 1
+	}
+}

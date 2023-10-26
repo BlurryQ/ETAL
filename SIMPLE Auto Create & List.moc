@@ -1,0 +1,57 @@
+﻿local bDebugPrinting = true;	// set this false to disable all the debug printing in the output file
+
+local qFinKey = 0;
+local rFinKey = 0;
+local FIN = 51;
+
+function OnInit()
+{
+    ICR_EnableDebugLog(bDebugPrinting);
+    ICR_SetFeature("CONSOLE",bDebugPrinting);
+    ICR_SetFeature("AUTORESTART",bDebugPrinting);
+	
+/*-------------------------------------------------------------------------------------------------------*/
+
+dofile ("etal\\lib\\keys.moc");
+	
+qFinKey = CheckForKey( { NAME = "FUN KEY 1010" , MATCHNAME = true, FILE = FIN, KEYTYPE = 1, FLAG_SET = 0x0011, FLAG_NOT = 0x0088, MATCHVALUE = true} );
+print("My new Finalise Key is " +qFinKey+ "----------");
+
+rFinKey = CheckForKey( { NAME = "FUN KEY 2020" , MATCHNAME = true, FILE = FIN, KEYTYPE = 1, FLAG_SET = 0x0010, FLAG_NOT = 0x0009, MATCHVALUE = true} );
+print("My new Finalise Key is " +rFinKey+ "----------");
+	
+	
+}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function OnRunScriptKeyPress(nFile, nRecord, nNumber, nValue, nFlag)
+	{
+		if(nNumber = 30)
+			{
+				ICR_ListDialog_AddItem("Fun 1",true)
+				ICR_ListDialog_AddItem("Fun 2")
+				
+				local nPay = ICR_ListDialog("Payment Method")
+				
+				switch(nPay)
+					{
+						case 1:
+							ICR_KeyPress (FIN, qFinKey)
+							return true
+							break;
+							
+						case 2: 
+							ICR_KeyPress (FIN, rFinKey)
+							return true
+							break;
+						default:
+							return false;
+					}
+				}
+			else
+				{
+					return true;
+				}
+	}
+							

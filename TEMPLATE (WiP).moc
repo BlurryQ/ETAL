@@ -1,0 +1,232 @@
+﻿dofile("etal\\lib\\keys.moc"); // Load Keys from lib (auto crate key)
+
+local bDebugPrinting = false;	// set this false to disable all the debug printing in the output file
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function OnInit()
+{
+ICR_EnableDebugLog(bDebugPrinting);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+
+local sSignOff = CheckForKey( { NAME = "SIGN OFF" , FILE = 53, KEYTYPE = 75, MATCHNAME = true} ); //check/ create STS key
+print("SIGN OFF STS key is record "+sSignOff)
+ICR_SetLocalUserData("lSignOff",sSignOff)
+
+local sClockOut = CheckForKey( { NAME = "CLOCK OUT" , FILE = 53, KEYTYPE = 106, MATCHNAME = true} ); //check/ create STS key
+print("CLOCK OUT STS key is record "+sClockOut)
+ICR_SetLocalUserData("lClockOut",sClockOut)
+
+ICR_SetLocalUserData("CLERK", 0) //set clerk secret number
+ICR_SetLocalUserData("COMPSET", 0) //set clerk compulsary clocking setting OFF
+
+ICR_SetLocalUserData("ENABLED", false, true) //set time & attendence script enabled ON
+ICR_SetLocalUserData("NUMBENABLED", false, true) //turn numberpad script on
+
+ICR_SetLocalUserData("CLERKON", false, true) //set clerk menu shift on
+ICR_SetLocalUserData("MENU", 0, true) //set default menu STS record
+
+local nPGM = ICR_GetPGMData(399,53); //Get STS Data
+local sMax = nPGM.SIZE //Get STS Maximim file size
+print("Status key file size is "+sMax)
+ICR_SetLocalUserData("STSSIZE", sMax) //set STS record size
+}
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function AfterSignOn(nClerk)
+	{
+		local nEnabled = ICR_GetLocalUserData("ENABLED") //get script enabled setting
+		local cEnable = ICR_GetLocalUserData("CLERKON") //get clerk menu shift on	
+
+		local tSys = ICR_GetSystemData()
+		local nMode = tSys.MODE		
+		
+		if(nEnabled == true)
+			{
+				local tClerk = ICR_GetPGMData(5,nClerk); // check clerk flags
+				local sNumber = tClerk.SECRETNUMBER
+				if (tClerk.OPERATION & 0x0200) // check compulsary clocking in is set
+					{
+						ICR_SetLocalUserData("CLERK",sNumber) //save clerk secret number
+						ICR_SetLocalUserData("COMPSET",1) //save clerk compulsary clocking setting ON
+					}
+				else
+					{
+						ICR_SetLocalUserData("CLERK",sNumber) //save clerk secret number
+						ICR_SetLocalUserData("COMPSET",0) //save clerk compulsary clocking setting OFF			
+					}
+			}
+					
+		if(nMode == 1 || nMode == 3)
+			{
+				local cEnable = ICR_GetLocalUserData("CLERKON") //get clerk menu shift on
+				if(cEnable == true)
+					{
+						local nMenu = ICR_GetLocalUserData("MENU") //get default menu STS record
+						ICR_KeyPress(53,nMenu) //press menu level
+					}
+			}
+	}
+	
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function BeforeKeyPress(nFile, nRecord, nKeytype)
+	{
+		if(nKeytype == 20 || nKeytype == 21 || nKeytype == 22 || nKeytype == 23) //if any TRN key that needs number entry
+			{
+				local nEnabled = ICR_GetLocalUserData("NUMBENABLED") //get numberpad script details
+					if(nEnabled ==true) //if enabled
+						{
+							print("I have just pressed file: " + nFile + " & record: " + nRecord)
+							local nInput = ICR_GetNumberDialog("Enter Value", "",0) //enter value
+							if(nInput == 0)
+								{
+									return false;
+								}
+							else	
+								{
+									ICR_SetInput(nInput) //enter value to input
+								}
+						}
+					else
+						{
+							return true;
+						}
+			}
+			
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+	
+function AfterKeyPress (nFile,nRecord,nKeyType)
+	{
+		if(nFile == 53 && nRecord == 101 || nFile == 53 && nRecord == 104)
+			{
+				local cEnable = ICR_GetLocalUserData("CLERKON") //get clerk menu shift on
+				if(cEnable == true) //if clerk menu shift enabled
+					{
+						local nClerk = ICR_GetCurrentClerk();
+						if(nClerk !=0)
+							{
+								local nMenu = ICR_GetLocalUserData("MENU") //get default menu STS record
+								ICR_KeyPress(53,nMenu) //press menu level
+							}
+						else
+							{
+								return true;
+							}
+					}
+			}
+	}
+	
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function AfterSignOn(nClerk)
+	{
+		local tSys = ICR_GetSystemData() //get system data
+		local nMode = tSys.MODE //get currnet mode
+		print("Currently in Mode " +nMode)
+		if(nMode == 1 || nMode == 3) //if sales or refund mode
+			{
+				local cEnable = ICR_GetLocalUserData("CLERKON") //get clerk menu shift on
+				if(cEnable == true) //if clerk menu shift enabled
+					{
+						local nMenu = ICR_GetLocalUserData("MENU") //get default menu STS record
+						ICR_KeyPress(53,nMenu) //press menu level
+					}
+			}
+	}
+	
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+		local nEnabled = ICR_GetLocalUserData("ENABLED") //get time & attendance script enabled setting
+		if(nEnabled == true)
+			{
+				local nSignOff = ICR_GetLocalUserData("lSignOff") //get sign off record number
+				local nClockOut = ICR_GetLocalUserData("lClockOut") //get clock out record number
+				local nClerk = ICR_GetLocalUserData("CLERK") //get clerk secret number
+				local nCompSet = ICR_GetLocalUserData("COMPSET") //get clerk compulsary clocking setting
+				if(nFile == 53 && nRecord == nSignOff) //If our key
+					{
+						if(nCompSet == 1)
+							{
+								local nResult = ICR_MessageBox("Do you want to clock out?","","EXIT",1) //as if staff wants to clock out
+								switch(nResult)
+									{
+										case 0: return true; //carry on
+										
+										case 1: ICR_SetInput(nClerk) //input clerk number
+												ICR_KeyPress(53,nClockOut) //press clock out
+												return true;
+												
+										default: return false
+									}
+							}
+						else
+							{
+								return true;
+							}
+						ICR_SetLocalUserData("CLERK",0) //set clerk secret number
+						ICR_SetLocalUserData("COMPSET",0) //set clerk compulsary clocking setting OFF
+					}
+				else
+					{
+						return true;
+					}
+			}
+		else
+			{
+				return true;
+			}
+	}
+		
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+		
+function OnEnterPGMMenu(nSub) // When entering PGM 3
+	{
+		ICR_PurgeProgramSettings(); // Clear settings and repull data
+		switch(nSub)
+			{
+				case 0: // System settings
+					ICR_AdvertiseProgramSetting("Script Details", "SCRIPTVERINF"); //show script info		
+					ICR_AdvertiseProgramHeading("Numberpad on TRN keys");// Heading
+					ICR_AdvertiseProgramSetting("Enable numberpad?", "NUMBENABLED");  //enable nuberpad script
+					ICR_AdvertiseProgramHeading("Clock out on sign off");// Heading
+					ICR_AdvertiseProgramSetting("Enable clock out on sign off?", "ENABLED");  //enable time & attendence script
+					ICR_AdvertiseProgramHeading("Clerk Menu Shift");// Heading
+					ICR_AdvertiseProgramSetting("Enable clerk default menu shift?", "CLERKON");  // enable menu shift
+					local nID = ICR_AdvertiseProgramSetting("Default Menu Level", "MENU");  // default menu to use
+					ICR_ProgramItem_SetOptionList(nID,1)	
+					break;
+				default: 
+					ICR_AdvertiseProgramHeading("This menu doesn't exist"); //if they break my menus
+					break; // Stop
+			}
+	}
+	
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+	
+function OnEnterPGMOptionList(nID)
+	{
+		local sMax = ICR_GetLocalUserData("STSSIZE") //get STS record size
+		
+		ICR_PurgeProgramOptionList(); //clear data
+		switch(nID)
+			{
+				case 1:
+					for(local nCount = 1; nCount <= sMax; nCount++) //count all STS keys
+						{
+							local nSTS = ICR_GetPGMData(53,nCount) //get STS key info
+							local sKeyType = nSTS.KEYTYPE //get STS key types
+							if(sKeyType == 160) //if menu shift
+								{
+									local sName = nSTS.NAME //get STS name
+									ICR_ProgramOptionList_Add(sName, nCount) //add to list
+								}
+						}
+					break;
+				default:
+					break;
+			}
+	}

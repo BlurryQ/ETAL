@@ -1,0 +1,172 @@
+﻿local bDebugPrinting = true;	// set this false to disable all the debug printing in the output file
+
+enum EVENT {DOWN = 0, UP = 1, MOVE = 2}; 
+local bSelect = 0;
+local bLocation = {};
+/*----------------------------------Window Information----------------------------------*/
+local nWindowID = 0; //No ID for Window
+local nWindowDimensions = 0; //No dimensions for Window
+/*--------------------------------END Window Information--------------------------------*/
+
+function OnInit()
+{
+ICR_EnableDebugLog(bDebugPrinting);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+
+/*----------------------------------Window Information----------------------------------*/
+nWindowID = ICR_SalesModeWindow_Add("window.xml"); //Adding window.xml to script - true = Home Mode
+nWindowDimensions = ICR_GetWindowDimensions(nWindowID); //get dimensions from the xml
+local nWindowEnable = ICR_Window_Enable (nWindowID,false); //Turn window off
+/*--------------------------------END Window Information--------------------------------*/
+}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function PaintWindow() //This is where I put the things I want in the window (custom function)
+{
+	
+	/*local tFont = ICR_CreateFont("Arial", 20); //Setting font
+    ICR_SelectFont(tFont); // Selecting font
+    ICR_SetText_Colour(000000); //Colour = black
+	ICR_DrawText (10,50,"Hello"); //position left, top + text
+	ICR_DrawText (10,70,"Hi"); //position left, top + text
+	
+	local iLoad = ICR_LoadImage("Home.png"); //Load image into ETAL
+	local iSelect = ICR_SelectImage(iLoad); //Select Image
+	ICR_DrawImage(10, 10); //Display Image*/
+	
+	local nWindowDimensions = ICR_GetWindowDimensions(nWindowID);
+	
+	local xPos = 25
+	local yPos = 20 
+	local hBox = 40 //Drawn boxes height
+	local wBox = 40 //Drawn boxes width
+	
+	for(local nCount = 1; nCount <= 8; nCount++) // Count to 8
+		{
+			if(nCount % 2 != 0) // For every box divisable by 2
+				{
+					ICR_DrawBox(xPos,yPos, wBox, hBox, 0x00FF00); //Draw a green box
+					
+					if(bSelect == nCount) //if this box is selected
+						{
+							ICR_DrawFrame(xPos,yPos,wBox, hBox, 5, 0x000080); //when selected draw 5px frame in blue
+						}
+					bLocation[nCount] <- {"LEFT": xPos, "TOP": yPos, "BOTTOM": yPos + hBox, "RIGHT": xPos + wBox}; //save location of box
+					xPos += 0; //add 0px to the x for the red boxes
+					yPos += (hBox * 2); //add 40px to the y for the red boxes
+				}
+					else //For odd numbered boxes
+				{
+					ICR_DrawBox(xPos,yPos, wBox, hBox, 0xFF0000);//Draw a red box
+					
+					if(bSelect == nCount) //if this box is selected
+						{
+							ICR_DrawFrame(xPos,yPos,wBox, hBox, 5, 0x000080); //when selected draw 5px frame in blue
+						}
+					bLocation[nCount] <- {"LEFT": xPos, "TOP": yPos, "BOTTOM": yPos + hBox, "RIGHT": xPos + wBox};//save location of box
+					xPos += (wBox * 2); //add 40px to the x for the green boxes
+					yPos -= (hBox * 2); //add 40px to the y for the green boxes 
+				}
+		}
+	
+}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function OnWindowPaint(nID) //launched above window I want created
+	{
+	  if(nID == nWindowID) //another function call from ICRTouch askng what needs to happen to make our window redraw
+		  {
+			PaintWindow(); //run function above
+		  }  
+	}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function OnRunScriptKeyPress (nFile, nRecord, nNumber, nValue, nFlag)
+	{
+		if(nNumber == 30) //If our key
+			{
+				ICR_Window_Enable (nWindowID,true) //open window
+				bLocation.clear(); // Clear X & Y locations
+				ICR_RedrawScreen(); /*ICR_RedrawWindow(21, nWindowID); //Reload Window*/
+			}
+	}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function OnMouseEvent(nWindowID, nEvent, nX, nY)
+	{
+		if(nWindowID == nWindowID) //if our window
+			{
+				switch(nEvent) //Options for what happens
+					{
+						case EVENT.DOWN: //mouse pressed down
+							break;	// don't care because I will look at the up event
+						case EVENT.UP: //mouse released
+								DetectKeyPressed(nX, nY); //track mouse location
+								switch(bSelect)
+									{
+										case 0: //if nothing selected 
+											ICR_Window_Enable(nWindowID, false); //close window
+											break;
+										case bSelect: //if box selected
+											ICR_KeyPress(1,bSelect) //press PLU + box number
+											break;
+									}
+								ICR_RedrawScreen();
+								break;
+						case EVENT.MOVE:
+								break;
+					}
+			}
+	}
+	
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function DetectKeyPressed(nX, nY)
+{
+	// Checking through our bLocation table.
+	/* format:
+	   {[0] = {LEFT = 0, TOP = 0, RIGHT = 0, BOTTOM = 0},
+	    [1] = {LEFT = 0, TOP = 0, RIGHT = 0, BOTTOM = 0}}
+	*/
+	// Using the foreach loop we go through our 2 level table.
+	// In this case:
+	// idx = the slot number
+	// val = the value table attached to the slot.
+	// By calling val.LEFT we can get the LEFT value of the current idx.
+	// this will go through the entire loop until it finds a match.
+	// When it finds a match, it assigns the value to a global variable (bSelect), then breaks out.
+	// If no match is found, it leaves bSelect as 0, indicating that no boxes have been selected.
+	foreach(idx, val in bLocation)
+	{
+		// Checking the coordinates are within the constraints of a "box".
+		if((nX >= val.LEFT && nX <= val.RIGHT) && (nY >= val.TOP && nY <= val.BOTTOM))
+		{
+			// This "box" index matches, assign the current index to bSelect.
+			bSelect = idx;
+			// We're done here, break out of the loop.
+			// Do not continue with the remaining values.
+			break;
+		}
+		// No match has been found on this iteration, assigning 0 to bSelect.
+		// If no match is found once the loop ends, it will leave with 0 as it's value.
+		else bSelect = 0;
+	}
+}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function AfterModeChange(nFrom, nTo)
+{
+	// Saving our bDebugPrinting variable to our local.userdata.
+	ICR_SetLocalUserData("bDebugPrinting", bDebugPrinting);
+	
+	// Disable the window when switching modes.
+	ICR_Window_Enable(nWindowID, false);
+}

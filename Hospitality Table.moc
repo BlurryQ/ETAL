@@ -1,0 +1,70 @@
+﻿
+local bDebugPrinting = false;	// Set this false to disable all the debug printing in the output file
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function OnInit()
+	{
+		ICR_EnableDebugLog(bDebugPrinting);	
+		ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+		ICR_SetFeature("CONSOLE",bDebugPrinting);
+		ICR_SetFeature("AUTORESTART",bDebugPrinting);	
+	}
+	
+local hospitalityTable = 317
+local scriptKey = 318
+local subTotal = 319
+local drinkDiscount = 26
+local foodDiscount = 27
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function BeforeKeyPress(nFile, nRecord, nKeytype) {
+	if(nFile == 53 && nRecord == scriptKey) {
+		local getClerkAccess = permittedClerk()
+		if(getClerkAccess) {
+			openHospitalityTable()
+			whichDiscount()
+		} else {
+			return true;
+		}
+	} else {
+		return true;
+	}
+}
+
+function permittedClerk() {
+	local clerkBuffer = ICR_GetClerkBuffer_Index()
+	local clerkRecord = clerkBuffer.CLERK;
+	if(clerkRecord == 1 || clerkRecord == 2) {
+		return true;
+	}
+}
+
+function openHospitalityTable() {
+	ICR_SetInput(201)
+	ICR_KeyPress(53,hospitalityTable)
+}
+
+function whichDiscount() {
+	ICR_ListDialog_AddItem("Food Discount", true);
+	ICR_ListDialog_AddItem("Drink Discount");
+	ICR_ListDialog_AddItem("Both Discounts");
+	local getDiscounts = ICR_ListDialog("Which discounts apply");
+	applyDiscount(getDiscounts)
+}
+
+function applyDiscount(discountToApply) {
+	switch(discountToApply) {
+		case 1:	ICR_KeyPress(53,subTotal)
+				ICR_KeyPress(52,foodDiscount)
+				break;
+		case 2:	ICR_KeyPress(53,subTotal)
+				ICR_KeyPress(52,drinkDiscount)
+				break;
+		case 3: ICR_KeyPress(53,subTotal)
+				ICR_KeyPress(52,foodDiscount)
+				ICR_KeyPress(53,subTotal)
+				ICR_KeyPress(52,drinkDiscount)
+		}
+}

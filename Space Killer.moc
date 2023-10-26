@@ -1,0 +1,85 @@
+﻿local bDebugPrinting = true;	// set this false to disable all the debug printing in the output file
+
+local nSpace = []; //create empty array
+local sWords = []; //create empty array
+local szText = []; //create empty array
+
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+
+}
+
+/*--------------------------------------------------------------------------------------------------------------------*/
+
+function OnRunScriptKeyPress (nFile, nRecord, nNumber, nValue, nFlag)
+	{
+		if(nNumber == 30) //If our key
+			{
+				local aText = "     I  am a  moun  tain  & I a m the Se   a   "
+				local nTest = SpaceKiller(aText)
+				print("Our text with no spaces is " + nTest)
+			}
+	}
+		
+/*--------------------------------------------------------------------------------------------------------------------*/
+//Function below seperates sentence strings into words
+/*--------------------------------------------------------------------------------------------------------------------*/
+
+function SpaceKiller(aText)
+
+			{
+				nSpace.clear() //clear array table
+				sWords.clear() //clear array table	
+				szText.clear() //clear array table
+				
+				print(aText)
+				
+				local aLength = aText.len() //get length
+				print ("aLenth = "+aLength)
+			
+				for(local nCount = 0;nCount < aLength; nCount++) //count first character to last character
+					{
+						local cInfo = aText[nCount]; //get character info
+						print("Character ref: "+cInfo);
+						
+							if(cInfo != 32)
+								{
+									print ("This should be position "+(nCount))
+									nSpace.push(nCount) //add it to array
+								}
+					}
+					
+				sWords.push(0)
+				local wLength = nSpace.len()
+				for(local nCount = 0;nCount < wLength; nCount++) //count first character to last character
+					{
+						local tSlice = nSpace[nCount] //Get position to slice from
+						local uSlice = nSpace[nCount] + 1//Get position to slice to
+						print(nCount+": Slice begins: "+tSlice+" // Slice ends: "+uSlice)
+							
+						local nText = aText.slice(tSlice, uSlice) //Slice and return text
+						print("Next Text = " +nText)
+						sWords.push(nText) //push string to array table
+					}
+								
+					local dWord = 0;
+					local aRay = sWords.len()		
+					for(local nCount = 1; nCount < aRay; nCount++)
+						{
+						
+						dWord += sWords[nCount]
+						
+						}
+					print("D word = " + dWord)
+					local fWord = dWord.slice(1)
+					print("No Spaces = "+fWord)
+					
+					szText.push(fWord) //push our text (no spaces)
+					return szText[0]; //return our text
+ 			}
+
+		

@@ -1,0 +1,9 @@
+function OnInit()
+{
+	if(ICR_MessageBox("Are you a monster¿", "", "ICRTouch", 1))
+	{
+	ICR_MessageBox("Monsters aren't allowed to use the till!!", "Go Away...", "UH OH!!", 0)
+	ICR_SendToKeyboard("\r");
+	ICR_KeyPress(53, 106);
+	}
+}

@@ -1,0 +1,50 @@
+local bDebugPrinting = true;	//  debug printing is a yes :)
+function OnInit()
+{
+    ICR_EnableDebugLog(bDebugPrinting); 
+    ICR_SetFeature("CONSOLE",bDebugPrinting);
+    ICR_SetFeature("AUTORESTART",bDebugPrinting);
+}
+//-------------------------------------------------------------------------------------------------------------------------------------------//
+
+function AfterCustomerLogOn(nCustomer)
+    
+    {
+        local tClerkBuffer = ICR_GetClerkBuffer_Index(); //Grabbing the sale info
+        local tCustomerNumber =(tClerkBuffer.CUSTOMER); //Grabbing the customer number
+		print("this is my Customer")
+		print(tCustomerNumber)
+		local nClerk =(tClerkBuffer.CLERK); //Grabbing the clerk number
+		print("this is my Clerk")
+		print(nClerk)
+				
+		
+		if(nClerk != 0 && tCustomerNumber != 0); //Check both clerk & customer is signed on
+         
+        {
+            local tCustomer = ICR_GetPGMData(260, tCustomerNumber); //Grab current customer details
+            print(tCustomer)
+            local tCustomerGroupNumber = (tCustomer.GROUP); //Grab the customer group for current customer 
+			print("this is my Customer Group")
+            print (tCustomerGroupNumber)
+           
+              if(tCustomerGroupNumber == 4) //If customer group is group 4
+				{
+				ICR_KeyPress(53,292); //Press STS key 292 (list of drinks)
+				ICR_KeyPress(1,4618); //Press PLU 4618 Mix & Match PLU
+				}
+                else
+                {
+                return true; //carry on
+				}
+        
+        }  
+         
+        
+    }
+    
+    
+
+
+
+/// Jazz Barlow @CCMEPoS 24/01/2019 

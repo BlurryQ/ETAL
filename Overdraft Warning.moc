@@ -1,0 +1,49 @@
+local bDebugPrinting = true;	//  debug printing is a yes :)
+/*-------------------------------------------------------------------------------------------------------------------------------------------*/
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+
+ICR_AdvertiseProgramHeading("Customer Overdraft Warning"); //Enable script heading
+ICR_SetLocalUserData("OVERDRAFT",false,true); //Disable script
+ICR_AdvertiseProgramSetting("Enable Customer Overdraft Warning?", "OVERDRAFT");  //Enable in PGM 3
+}
+/*-------------------------------------------------------------------------------------------------------------------------------------------*/
+//NO OVERDRAFT CUSTOMERS
+/*-------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function BeforeKeyPress(nFile,nRecord,nKeyType)
+{
+	local nEnable = ICR_GetLocalUserData("OVERDRAFT")
+	if(nEnable == true)
+		{
+			switch(nKeyType)
+				{
+					case 4: //if cash
+								local nBuff = ICR_GetClerkBuffer_Index()//check buffer
+								local nCust = nBuff.CUSTOMER;//get customer number
+								print("customer num -----> " + nCust);//print customer number
+								local nBalFile = ICR_GetPGMData(261, nBuff.CUSTOMER); //Get customer table
+								local nCustBal = (nBalFile.BALANCE); //Get customre balance
+								print("BALANCE -----> " + nCustBal);//print customer balance
+								if(nCust != 0)//if  customer in sale
+									{
+										local nTotal = nBuff.THISSALETOTAL;//get transaction total
+										print("Total Value -----> " + nTotal);//print value								
+										if(nTotal > nCustBal)
+											{
+												ICR_MessageBox("Not enough in account!", "Please Top Up", "WARNING",0); //If no overdraft
+												return false;									
+											}
+									}
+								print("cash");
+								return true;
+					default: //otherwise	
+								break;
+								return true;
+				}
+		}
+}

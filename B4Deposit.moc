@@ -1,0 +1,91 @@
+local bDebugPrinting = false;	// set this false to disable all the debug printing in the output file
+
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+}
+
+/*----------------------------------------------------------*/
+
+function BeforeKeyPress(nFile, nRecord, nKeytype)
+{
+   if(nFile == 1 && nRecord == 11999)
+   
+		{
+			local nPersRef = ICR_GetNumberDialog("How many deposit refunds?",0,false)//Get keypad for number entry
+			print("Deposit multiply by" +nPersRef)
+			ICR_SetInput(nPersRef)//Input total people being refunded
+			ICR_KeyPress(53,189) //Multiply
+		} 
+   else
+		{
+			return true;//Otherwise carry on
+		}
+}
+
+/*----------------------------------------------------------*/
+
+function OnRunScriptKeyPress (nFile, nRecord, nNumber, nValue, nFlag)
+{
+	if (nNumber == 120) //If our key
+	
+	{
+		local nDepReq = ICR_GetNumberDialog("How many deposit required?",0,false)//Get keypad for number entry
+		print("Total Deposit required -->" +nDepReq)
+		ICR_ListDialog_AddItem("Pay with Cash",true); //ADDING FIRST ITEM TO OUR LIST, ONLY NEED TRUE ON HERE
+		ICR_ListDialog_AddItem("Pay with Card"); // SECOND ITEM REPEAT IF NEEDED
+		local nResult = ICR_ListDialog("How are they paying?"); //POPPING UP LIST FOR US TO USE,TITLE IN THE "" CAN BE ANYTHING
+        switch(nResult)
+			{
+				case 1: //CARD
+					local nCValue = (nDepReq * 5000)//Multiply total people by £50
+					print ("Total charge --->" + nCValue)
+					local nTotVal = format("%0.2f",nCValue.tofloat()/100)	// creating the current amount and shifting the decimal over
+					local nConf = ICR_MessageBox ("This is for £ "+nTotVal+"","Are you happy to continue?","Check",1);//Check the sale
+					if (nConf ==1)
+						{
+							ICR_SetInput (nCValue)
+							ICR_SetNextDialogInput(1)//Press 1 for Cash
+							ICR_KeyPress(52,7)//Press Deposit
+							break;
+						}
+					if (nConf ==0)
+						{
+							ICR_Sound(2); //plays an error noise
+							ICR_MessageBox("Cancelling Transaction","","ERROR",0);
+							return false;
+						}
+
+				case 2: //CARD                    		
+					local nCValue = (nDepReq * 5000)//Multiply total people by £50
+					print ("Total charge --->" + nCValue)
+					local nTotVal = format("%0.2f",nCValue.tofloat()/100)	// creating the current amount and shifting the decimal over
+					local nConf = ICR_MessageBox ("This is for £ "+nTotVal+"","Are you happy to continue?","Check",1);//Check the sale
+					if (nConf ==1)
+						{
+							ICR_SetInput (nCValue)
+							ICR_SetNextDialogInput(3)//Press 3 for CC
+							ICR_KeyPress(52,7)//Press Deposit	
+							break;
+						}
+					if (nConf ==0)
+						{
+							ICR_Sound(2); //plays an error noise
+							ICR_MessageBox("Cancelling Transaction","","ERROR",0);
+							return false;
+						}
+				default:
+					break;
+			
+			
+			}
+						
+	}
+	else
+		{
+			return true;		
+		}
+}

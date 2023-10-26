@@ -1,0 +1,20 @@
+﻿local bDebugPrinting = false;	// Set this false to disable all the debug printing in the output file
+
+function OnInit()
+	{
+		ICR_EnableDebugLog(true);	
+		ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+		ICR_SetFeature("CONSOLE",bDebugPrinting);
+		ICR_SetFeature("AUTORESTART",bDebugPrinting);
+		}
+
+/*----------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function BeforeKeyPress(nFile, nRecord, nKeytype)
+	{
+		if(nFile == 52 && nRecord == 19)
+			{
+				ICR_SetInput(200)
+			}
+	}
+				

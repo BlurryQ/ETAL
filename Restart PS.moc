@@ -1,0 +1,21 @@
+local bDebugPrinting = false;	// set this false to disable all the debug printing in the output file
+
+dofile("etal\\lib\\keys.moc"); // Load Keys from lib (auto crate key)
+
+function OnInit()
+	{
+		ICR_EnableDebugLog(true);	
+		ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+		ICR_SetFeature("CONSOLE",bDebugPrinting);
+		ICR_SetFeature("AUTORESTART",bDebugPrinting);
+		
+		local nPAC = CheckForKey( { NAME = "RESTART PAY AT COUNTER" , MATCHNAME = true, FILE = 53, KEYTYPE = 209, VALUE = 25,  MATCHNAME = true} ); //Create STS key
+		print("Restart PAC STS key is record "+nPAC)
+		local nPAT = CheckForKey( { NAME = "RESTART PAY AT TABLE" , MATCHNAME = true, FILE = 53, KEYTYPE = 209, VALUE = 9, MATCHNAME = true} ); //Create STS key
+		print("Restart PAC STS key is record "+nPAT)
+		
+		local sCmdPromptText = "xcopy c:\\ICRTouch\\ETAL\\Restart PS\\Batches c:\\ICRTouch\\batch/Y/S/I";
+		if(bDebugPrinting)print(sCmdPromptText);
+		system(sCmdPromptText);
+	}
+///////////////////////////////////////////

@@ -1,0 +1,25 @@
+local bDebugPrinting = false;	//  debug printing is a yes :)
+//-------------------------------------------------------------------------------------------------------------------------------------------//
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+}
+//-------------------------------------------------------------------------------------------------------------------------------------------//
+function OnRunScriptKeyPress(nFile, nRecord, nNumber, nValue, nFlag)
+
+{
+	if (nNumber == 73)
+	{
+		
+		local nInput = ICR_GetNumberDialog("Enter Spent Value", 0, false); //Enter Company Card Spend
+		ICR_SetInput(nInput)
+		ICR_KeyPress(52, 18) //Press Company Card
+	}
+		else
+		{
+		return false
+		}
+	}

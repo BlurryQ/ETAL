@@ -1,0 +1,150 @@
+﻿local bDebugPrinting = true;	// set this false to disable all the debug printing in the output file
+/*-----------------------------------------------IP STUFF------------------------------------------------------------------------------------------------*/
+local g_nPipeID = 0;
+local g_szIPAddress = "";
+/*---------------------------------------------END IP STUFF----------------------------------------------------------------------------------------------*/
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+
+ICR_AdvertiseProgramHeading("Enable Cash Numberpad"); //Enable script heading
+ICR_SetLocalUserData("CASHNUMB",false,true); //Disable script
+ICR_AdvertiseProgramSetting("Enable Numberpad on cash?", "CASHNUMB");  //Enable in PGM 3
+
+/*-----------------------------------------------IP STUFF------------------------------------------------------------------------------------------------*/
+	// Send an "ipconfig" command through the command line using a pipe method.
+    g_nPipeID = ICR_File_OpenPipe("ipconfig");
+/*---------------------------------------------END IP STUFF----------------------------------------------------------------------------------------------*/
+/*---------------------------------------------TEAMVIEWER ID----------------------------------------------------------------------------------------------*/
+local tFolder = "C:\\ICRTouch\\batch"
+local tCMD = "start \"\" /min \"" + tFolder + "\\TeamViewerID.bat\"";
+system(tCMD);
+
+}
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------*/
+//Pressing this buttons show:
+//							x	TeamViewer ID
+//							x	Till Number
+//							x	Till ID
+//							x	Check Master
+//							x	IP Address
+//							x	IDC Status
+
+/*-----------------------------------------------IP STUFF------------------------------------------------------------------------------------------------*/
+function OnFile_ReadPipeResult(nID,szData)
+{
+    if(nID == g_nPipeID)
+    {
+        // It's the pipe ID we want, find the IPv4 address.
+        if(szData.find("IPv4 Address") != null)
+        {
+            // Found it.
+            g_szIPAddress = szData.slice(szData.find(":") + 2);
+			ICR_SetLocalUserData("IP", g_szIPAddress);
+        }
+    }
+}
+/*---------------------------------------------END IP STUFF----------------------------------------------------------------------------------------------*/
+
+function ReadFile(szFileName) 
+{       
+   local szData="";
+   try
+   {
+        local fileTarget = file(szFileName,"rb");
+        if(fileTarget.len() == 0)return ""; // file is empty.
+
+        local cCurrentChar = fileTarget.readn('b');
+        while (fileTarget.tell() < fileTarget.len())
+        {
+            szData += cCurrentChar.tochar();
+            cCurrentChar = fileTarget.readn('b');
+        }
+        szData += cCurrentChar.tochar();
+        //Close file.
+        fileTarget.flush();
+        fileTarget.close();
+        return szData;
+   }
+   catch(e)
+   {
+       print("Read ERR" +e + " "+szFileName);
+       return null;
+   } 
+}
+/*-------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function OnRunScriptKeyPress(nFile, nRecord, nNumber, nValue, nFlag)
+
+	{
+		if(nNumber == 1)
+			{				
+				ICR_KeyPress(53,176); //Run TeamViewer ID Batch
+				
+				local tPGM = ICR_GetPGMData(301,1); //Get terminal connecition
+				local nTillName = tPGM.TERMINALNAME; //Get terminal name
+				print("Terminal Name ------> " +nTillName);
+			
+				local nTillID = tPGM.TERMINALID; //Get terminal ID
+				print("Terminal ID ------> " +nTillID);
+				
+				local sPGM = ICR_GetSystemData(); //Get system data 
+				local nCheck = sPGM.CHECKMASTER; //get check tracking flags
+				print("Check Master is till -----> "+nCheck);
+
+				if(nTillID == nCheck) //If Till ID and Check Master ID are the same
+					{
+						nCheck = ("This is the check tracking master")
+					}
+				
+				local nIP = ICR_GetLocalUserData("IP"); //Get IP Info 
+				print("Till IP is -----> "+nIP);
+				
+				local tIDC = sPGM.IDCLASTSTATUS; //get IDC Status
+				print("IDC Status -----> "+tIDC);
+
+				if(tIDC == "INVALID ACCESSKEY")
+					{
+						tIDC = ("Invalid TOW Details")
+					}
+		
+		local nTeamViewerID = ReadFile("TeamViewerID.txt"); //Reads each line individually
+		print("TEAMVIEWER -----------------> "+nTeamViewerID);
+
+				ICR_DataEntryDialog_AddItem("TeamViewerID",true, nTeamViewerID, 2, 20, 0, true); //Populate TeamViewerID
+				ICR_DataEntryDialog_AddItem("Terminal Name",false, nTillName, 2, 20, 0, true); //Populate Till Name
+				ICR_DataEntryDialog_AddItem("Terminal ID",false, nTillID, 2, 20, 0, true); //Populate Till ID
+				ICR_DataEntryDialog_AddItem("Check Master is till ID",false, nCheck, 2, 20, 0, true); //Populate check master ID
+				ICR_DataEntryDialog_AddItem("Terminal IP Address",false,nIP, 2, 20, 0, true); //Populate IP Address
+				ICR_DataEntryDialog_AddItem("TOW Status",false,tIDC, 2, 20, 0, true); //Populate TOW Status				
+				ICR_DataEntryDialog_AddItem("", false, "Exit" 10); // Exit
+				local tResults = ICR_DataEntryDialog("Terminal Details"); //Results				
+			}
+	}
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------*/
+	
+function BeforeKeyPress(nFile, nRecord, nKeytype)
+	{
+		local nEnable = ICR_GetLocalUserData("CASHNUMB"); //Get cash numberpad settings
+		if(nEnable == true) //If cash numberpad enabled
+			{
+				if(nFile == 51 && nRecord == 1) //If cash key
+					{
+						local nCash = ICR_GetNumberDialog("Declare cash (in pence)",0, false); //bring up numberpad
+						ICR_SetInput(nCash); //set value
+						ICR_KeyPress(51, 1); //press cash
+					}
+				else
+					{
+						return true; //carry on
+					}
+			}
+		else
+			{
+				return true; //carry on
+			}
+	}

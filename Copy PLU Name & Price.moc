@@ -1,0 +1,44 @@
+﻿
+local bDebugPrinting = true;	// Set this false to disable all the debug printing in the output file
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function OnInit()
+
+	{
+		ICR_EnableDebugLog(bDebugPrinting);	
+		ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+		ICR_SetFeature("CONSOLE",bDebugPrinting);
+		ICR_SetFeature("AUTORESTART",bDebugPrinting);
+		
+	}
+		
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function OnRunScriptKeyPress(nFile, nRecord, nNumber, nValue, nFlag)
+	{
+		if(nNumber == 452) //if our script
+			{
+				local cBuff = ICR_GetClerkBuffer_Index()
+				local sItem = cBuff.SELITEM
+				print("Selected item :" + sItem)
+				
+				local bItem = ICR_GetClerkBuffer_Item(sItem)
+				local sFile = bItem.FILE
+				local sRecord = bItem.RECORD
+				print("nFile == " + sFile + " nRecord == " + sRecord)
+				
+				local PGM = ICR_GetPGMData(sFile,sRecord)
+				local pName = PGM.NAME
+				local pPrice = PGM.PRICE1L1
+				
+				local tPLU = { };
+				tPLU.NAME <- pName;
+				tPLU.PRICE1L1 <- pPrice
+				ICR_SetPGMData(1, 15, tPLU);
+				
+				ICR_KeyPress(52,1)
+				ICR_KeyPress(1,15)
+
+			}
+	}

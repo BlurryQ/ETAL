@@ -1,0 +1,28 @@
+local bDebugPrinting = false;	// set this false to disable all the debug printing in the output file
+
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+}
+
+/*----------------------------------------------------------*/
+
+function OnRunScriptKeyPress(nFile, nRecord, nNumber, nValue, nFlag)
+{
+	if(nNumber == 10) //Eat in
+		
+		{
+			ICR_KeyPress(53, 273)//Press eat in (tax shift)
+			ICR_KeyPress(53, 43)//Press Lunch screen
+		}
+
+	if(nNumber == 20) //Takeaway
+	
+	{
+		ICR_KeyPress(53, 274)//Press takeaway (tax shift)
+		ICR_KeyPress(53, 61)//Press T/A Lunch screen
+	}
+}

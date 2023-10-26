@@ -1,0 +1,55 @@
+﻿local bDebugPrinting = true;	// set this false to disable all the debug printing in the output file
+
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+
+/*--------------------------------------------------------------------------------------------------------------------*/
+
+ICR_SetLocalUserData ("DEPIN",0,true); //Set deposit in nNumber to 0
+ICR_SetLocalUserData ("DEPOUT",0,true); //Set deposit out nNumber to 0
+
+}
+
+/*--------------------------------------------------------------------------------------------------------------------*/
+
+function OnEnterPGMMenu(nSub) //When entering PGM 3
+	{
+		ICR_PurgeProgramSettings(); //Clear settings and repull data
+		switch(nSub)
+			{
+				case 0: // System settings
+					ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF"); //Show script info
+					ICR_AdvertiseProgramSubMenu("Deposits",1); // Deposit sub menu
+					ICR_AdvertiseProgramSubMenu("Other",2); //  Another sub menu
+					break;
+				case 1: // Submenu 1 (Deposits)
+					ICR_AdvertiseProgramHeading("Deposits Menu"); //Heading
+					ICR_AdvertiseProgramSetting ("Set Deposit IN nNumber","DEPIN"); //Set deposit in nNumber to 0
+					ICR_AdvertiseProgramSetting ("Set Deposit OUT nNumber","DEPOUT"); //Set deposit out nNumber to 0
+					break;
+				case 2: //Submenu 2 (Other)
+					ICR_AdvertiseProgramHeading("EMPTY"); //Heading
+					break;
+				default: 
+					ICR_AdvertiseProgramHeading("This menu doesn't exist"); //If they break my menus
+					break;
+			}
+	}
+
+
+/*--------------------------------------------------------------------------------------------------------------------*/
+
+function OnRunScriptKeyPress(nFile, nRecord, nNumber, nValue, nFlag)
+
+{
+	local dNumber = ICR_GetLocalUserData ("DEPIN")
+
+		if (nNumber == dNumber) //Our Key
+			{
+				ICR_MessageBox ("You have pressed a", "Script Key","",0)
+				return true
+			}
+}

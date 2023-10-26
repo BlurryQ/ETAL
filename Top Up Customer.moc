@@ -1,0 +1,72 @@
+local bDebugPrinting = false;	// set this false to disable all the debug printing in the output file
+
+dofile("etal\\lib\\keys.moc"); // Load Keys from lib (auto crate key)
+
+local sNumber = 666
+
+function OnInit()
+	{
+		 ICR_EnableDebugLog(true);	
+		 ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+		 ICR_SetLocalUserData("bDebugPrinting", bDebugPrinting, true);
+		 ICR_SetFeature("CONSOLE", bDebugPrinting);
+		 ICR_SetFeature("AUTORESTART", bDebugPrinting);
+		 
+		local sTopUp = CheckForKey( { NAME = "TOP UP ACCOUNT" , MATCHNAME = true, FILE = 53, KEYTYPE = 110, SCRIPTNUMBER = sNumber, MATCHVALUE = true} ); //Create STS key
+		print("Top up STS key is record "+sTopUp)
+	}
+
+/*-----------------------------------------------------------------------------*/
+
+function OnRunScriptKeyPress(nFile, nRecord, nNumber, nValue, nFlag)
+
+{
+	if (nNumber == sNumber)
+    
+    {
+		local nCust = ICR_GetClerkBuffer_Index()//check buffer
+		print("customer num" +nCust)
+			if(nCust.CUSTOMER == 0)
+				{
+					ICR_Sound(2)//Error Noise
+					ICR_MessageBox("No customer in sale!","Please add a customer","CUST",0);
+					return false;
+				}
+					else
+				{
+					local nAmounToTopup = ICR_GetNumberDialog("Enter TopUp Amount",0,false); //keypad to enter desired amount
+					print ("they want to topup")//print for debug
+					print (nAmounToTopup)//print for debug
+					local nDisplay = format("%0.2f",nAmounToTopup.tofloat()/100)	// creating the current amount and shifting the decimal over
+					local nContinue = ICR_MessageBox("Would you like to top up £"+nDisplay+"?","","",1) // confirming the topup amount
+						
+					if (nContinue == 1) //if they want to continue
+					   
+					   {
+							ICR_ListDialog_AddItem("Paying Cash",true);
+							ICR_ListDialog_AddItem("Paying Card");
+							local nPay = ICR_ListDialog("How are they paying?");
+							print("They are paying --->  " + nPay);
+								switch(nPay)
+									{
+										case 1: // If Cash
+											ICR_SetInput(nAmounToTopup); // Put top up amount into buffer
+											ICR_SetNextDialogInput(1); // cash drawer
+											ICR_KeyPress(52,21); // top up button
+											return true;
+											break;
+										case 2: //if card
+											ICR_SetInput(nAmounToTopup); // put top up amount into buffer
+											ICR_SetNextDialogInput(3); //card drawer
+											ICR_KeyPress(52,21); // top up button
+											return true;
+											break;
+										default: //If ESC
+											return false;
+											break;
+									}
+				
+						}
+				}
+	}
+}

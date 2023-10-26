@@ -1,0 +1,68 @@
+﻿dofile("etal\\lib\\keys.moc"); // Load Keys from lib (auto crate key)
+
+local bDebugPrinting = false;	// set this false to disable all the debug printing in the output file
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function OnInit()
+{
+	ICR_EnableDebugLog(true);	
+	ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+	ICR_SetFeature("CONSOLE",bDebugPrinting);
+	ICR_SetFeature("AUTORESTART",bDebugPrinting);
+
+	ICR_SetLocalUserData("DONATION",false) //set donation off
+}
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function BeforeKeyPress(nFile, nRecord, nKeytype)
+	{
+		if(nFile == 52 && nRecord == 5) //store table button
+			{
+			
+				local tClerkBuff = ICR_GetClerkBuffer_Index(); //get clerk buffer
+				if (tClerkBuff.TABLE == 0)//if no table open
+					{			
+						ICR_Sound(1);//play error sound
+						ICR_MessageBox ("No Table Open!","","Empty",0);//tell staff no table is open
+						return false;//do not proceed
+					}
+				print("buffer size = " + tClerkBuff.REGPOS)
+				for(local nCount = 1; nCount <= tClerkBuff.REGPOS; nCount++) //get the buffer size
+					{   
+						local tThisItem = ICR_GetClerkBuffer_Item(nCount); // go through each item
+						print("Item " + nCount + " has a file type of " + tThisItem.FILE + " and record " + tThisItem.RECORD)
+						if(tThisItem.FILE == 52 && tThisItem.RECORD == 18) // if it's a TRN
+							{
+								print("Donation key has been spotted")
+								ICR_SetLocalUserData("DONATION",true) //set donation on
+							}
+					}
+					
+				local tDonation = ICR_GetLocalUserData("DONATION") //get donation setting
+				if (tDonation == false) //if not in sale
+					{
+						local nDonate = ICR_MessageBox("Would you like to add a donation","to this table?","",1)
+						if(nDonate == 1) //if yes
+							{
+								ICR_KeyPress(52,18) //press donation TRN key
+							}
+						else
+							{
+								return true; //otherwise carry on
+							}
+					}
+			}
+	}
+
+		
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+	
+function AfterKeyPress(nFile, nRecord, nKeytype)
+	{
+		if(nFile == 52 && nRecord == 5) //store table button
+			{
+				ICR_SetLocalUserData("DONATION",false) //set donation off
+			}
+	}

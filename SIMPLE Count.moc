@@ -1,0 +1,50 @@
+﻿local bDebugPrinting = true;	// set this false to disable all the debug printing in the output file
+
+function OnInit()
+{
+    ICR_EnableDebugLog(bDebugPrinting);
+    ICR_SetFeature("CONSOLE",bDebugPrinting);
+    ICR_SetFeature("AUTORESTART",bDebugPrinting);
+}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function BeforeKeyPress(nFile, nRecord, nKeytype)
+	{
+		if (nFile == 51) //If finalisaction key
+			{
+				local cBuff = ICR_GetClerkBuffer_Index(); //Get clerk buffer
+				
+				for(local nNumb = 1; nNumb <= cBuff.REGPOS; nNumb++) //get unique PLU entries
+					{
+						local iTem = ICR_GetClerkBuffer_Item(nNumb); // go through each unique entry
+						
+								if(iTem.FILE == 1) // if it's a PLU
+									{
+										if(bDebugPrinting)print("Item "+nNumb+" is a PLU")
+										local tThisPLU = ICR_GetPGMData(iTem.FILE, iTem.RECORD); //Get data iTem.FILE = 1 (PLU)
+
+											if(tThisPLU.GROUP == 1) //If Drink
+												{
+													if(bDebugPrinting)print("Drink on Item "+nNumb);
+												}
+											
+											if(tThisPLU.GROUP == 2) //If Food
+												{
+													if(bDebugPrinting)print("Food on Item "+nNumb);
+												}
+											
+											if(tThisPLU.GROUP == 3) //If Drink
+												{
+													if(bDebugPrinting)print("MISC on Item "+nNumb);
+												}
+										  
+									} 
+					}
+				return true;
+			}
+				else
+			{
+				return true;
+			}
+	}

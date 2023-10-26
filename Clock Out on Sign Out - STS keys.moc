@@ -1,0 +1,166 @@
+﻿dofile("etal\\lib\\keys.moc"); // Load Keys from lib (auto crate key)
+
+local bDebugPrinting = false;	// set this false to disable all the debug printing in the output file
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function OnInit()
+	{
+		ICR_EnableDebugLog(true);	
+		ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+		ICR_SetFeature("CONSOLE",bDebugPrinting);
+		ICR_SetFeature("AUTORESTART",bDebugPrinting);
+
+		local sSignOff = CheckForKey( { NAME = "SIGN OFF" , FILE = 53, KEYTYPE = 75, MATCHNAME = true} ); //Create STS key
+		print("SIGN OFF STS key is record "+sSignOff)
+		ICR_SetLocalUserData("lSignOff",sSignOff)
+
+		local sClockOut = CheckForKey( { NAME = "CLOCK OUT" , FILE = 53, KEYTYPE = 106, MATCHNAME = true} ); //Create STS key
+		print("CLOCK OUT STS key is record "+sClockOut)
+		ICR_SetLocalUserData("lClockOut",sClockOut)
+
+		local tCancel = CheckForKey( { NAME = "CANCEL" , FILE = 52, KEYTYPE = 36, MATCHNAME = true} ); //Create TRN key
+		print("Cancel TRN key is record "+tCancel)
+		ICR_SetLocalUserData("tCancel",tCancel)
+
+		local pSignOn = CheckForKey( { NAME = "PIN SIGN ON" , FILE = 53, KEYTYPE = 72, MATCHNAME = true} ); //Create STS key
+		print("PIN SIGN ON STS key is record "+pSignOn)
+		ICR_SetLocalUserData("pSignOn",pSignOn)
+
+		ICR_SetLocalUserData("CLERK", 0) //set clerk secret number
+		ICR_SetLocalUserData("cRecord", 0) //set clerk record number
+		ICR_SetLocalUserData("COMPSET", 0) //set clerk compulsary clocking setting OFF
+		ICR_SetLocalUserData("ENABLED", true, true) //set script enabled ON
+		ICR_SetLocalUserData("cRecord", 0) //set clerk record number
+
+	}
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function AfterSignOn(nClerk)
+	{
+		local nEnabled = ICR_GetLocalUserData("ENABLED") //get script enabled setting
+		if(nEnabled == true)
+			{
+				local tClerk = ICR_GetPGMData(5,nClerk); // check clerk flags
+				local sNumber = tClerk.SECRETNUMBER
+				if (tClerk.OPERATION & 0x0200) // check compulsary clocking in is set
+					{
+						ICR_SetLocalUserData("CLERK",sNumber) //save clerk secret number
+						ICR_SetLocalUserData("COMPSET",1) //save clerk compulsary clocking setting ON
+					}
+				else
+					{
+						ICR_SetLocalUserData("CLERK",sNumber) //save clerk secret number
+						ICR_SetLocalUserData("COMPSET",0) //save clerk compulsary clocking setting OFF			
+					}
+			}
+	}
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function BeforeKeyPress(nFile, nRecord, nKeytype)
+	{
+		local nEnabled = ICR_GetLocalUserData("ENABLED") //get script enabled setting
+		if(nEnabled == true)
+			{
+				if (nFile == 53 && (nRecord == 111 || nRecord == 112 || nRecord == 113 || nRecord == 114 || nRecord == 115 || nRecord == 116 || nRecord == 117 || nRecord == 118 || nRecord == 119 || nRecord == 120 || nRecord == 121 || nRecord == 122 || nRecord == 123 || nRecord == 124 || nRecord == 125 || nRecord == 126 || nRecord == 127 || nRecord == 128 || nRecord == 129 || nRecord == 130 || nRecord == 130 || nRecord == 131 || nRecord == 132 || nRecord == 133 || nRecord == 134 || nRecord == 135 || nRecord == 136 || nRecord == 137 || nRecord == 138 || nRecord == 139 || nRecord == 140 || nRecord == 141 || nRecord == 142 || nRecord == 143 || nRecord == 144 || nRecord == 145 || nRecord == 146 || nRecord == 147 || nRecord == 148 || nRecord == 149 || nRecord == 150 || nRecord == 151 || nRecord == 152 || nRecord == 153 || nRecord == 154 || nRecord == 155 || nRecord == 156 || nRecord == 157 || nRecord == 158 || nRecord == 159 || nRecord == 160 || nRecord == 161 || nRecord == 162 || nRecord == 163 || nRecord == 164 || nRecord == 165 || nRecord == 166 || nRecord == 167 || nRecord == 168 || nRecord == 169 || nRecord == 170))
+					{
+						local cCheck = ICR_GetLocalUserData("cRecord")
+						if(cCheck != 0)
+							{
+								if(nFile == 53 && nRecord == cCheck)
+									{
+										ICR_MessageBox("Please wait 1 minute before clocking back in","","T&A",0)
+										return false;
+									}
+							}
+						local cSTSRec = nRecord	
+						ICR_SetLocalUserData("TEMP",cSTSRec)
+					}
+			
+				local nSignOff = ICR_GetLocalUserData("lSignOff") //get sign off record number
+				local pSignOn = ICR_GetLocalUserData("pSignOn") //get sign on record number
+				local nClockOut = ICR_GetLocalUserData("lClockOut") //get clock out record number
+				local nClerk = ICR_GetLocalUserData("CLERK") //get clerk secret number
+				local nCompSet = ICR_GetLocalUserData("COMPSET") //get clerk compulsary clocking setting
+				local tCancel = ICR_GetLocalUserData("tCancel") //get clock out record number	
+				
+				if(nFile == 53 && nRecord == nSignOff) //If our key
+					{
+						if(nCompSet == 1)
+							{
+								local nResult = ICR_MessageBox("Do you want to clock out?","","EXIT",1) //as if staff wants to clock out
+								switch(nResult)
+									{
+										case 0: //no
+												ICR_SetLocalUserData("cRecord", 0) //set clerk record number
+												return true; //carry on
+												break;
+										
+										case 1:
+												local cBuff = ICR_GetClerkBuffer_Index()
+												local cActive = cBuff.REGPOS
+												print("Clerk reg window has " + cActive + " items in it")
+												if(cActive != 0)
+													{
+														ICR_SetNextDialogInput("YES");
+														ICR_KeyPress(52,tCancel) //press cancel
+													}
+												local tRec = ICR_GetLocalUserData("TEMP")
+												ICR_SetLocalUserData("cRecord",tRec)
+												ICR_SetInput(nClerk) //input clerk number
+												ICR_KeyPress(53,nClockOut) //press clock out
+												ICR_StartTimer(60000) //1 minute timer (1 sec = 1000)
+												return true;
+												break;
+
+												
+										default: 
+												ICR_SetLocalUserData("cRecord", 0) //set clerk record number
+												return false
+												break;
+									}
+							}
+						else
+							{
+								return true;
+							}
+						ICR_SetLocalUserData("CLERK",0) //set clerk secret number
+						ICR_SetLocalUserData("COMPSET",0) //set clerk compulsary clocking setting OFF
+					}
+				else
+					{
+						return true;
+					}
+			}
+		else
+			{
+				return true;
+			}	
+	}
+		
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function OnTimer(nTimerID, nSystemTime) // When timer has hit designated time
+	{
+		ICR_SetLocalUserData("cRecord",0)
+		ICR_StopTimer(nTimerID) // Stop timer
+		print("Timer cleared and record reset")
+	}
+	
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+		
+function OnEnterPGMMenu(nSub) // When entering PGM 3
+	{
+		ICR_PurgeProgramSettings(); // Clear settings and repull data
+		switch(nSub)
+			{
+				case 0: // System settings
+					ICR_AdvertiseProgramSetting("Script Details", "SCRIPTVERINF"); // Show script info		
+					ICR_AdvertiseProgramSetting("Enable clock out on sign off?", "ENABLED");  // Itemiser to use
+					break;
+				default: 
+					ICR_AdvertiseProgramHeading("This menu doesn't exist"); // If they break my menus
+					break; // Stop
+			}
+	}

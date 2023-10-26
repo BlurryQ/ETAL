@@ -1,0 +1,107 @@
+﻿
+local bDebugPrinting = true;	// Set this false to disable all the debug printing in the output file
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+dofile("etal\\lib\\keys.moc"); // Load Keys from lib (auto crate key)
+local tNumber = 452
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function OnInit()
+
+	{
+		ICR_EnableDebugLog(bDebugPrinting);	
+		ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+		ICR_SetFeature("CONSOLE",bDebugPrinting);
+		ICR_SetFeature("AUTORESTART",bDebugPrinting);
+
+		local sTA = CheckForKey( { NAME = "TAKE AWAY" , MATCHNAME = true, FILE = 53, KEYTYPE = 110, SCRIPTNUMBER = tNumber, MATCHVALUE = true} ); //create STS key
+		print("Take away script STS key is record " + sTA)
+		
+		local sLoc = CheckForKey( { NAME = "LOCATION" , MATCHNAME = true, FILE = 53, KEYTYPE = 101, MATCHVALUE = true} ); //create STS key
+		print("Location STS key is record " + sLoc)
+		ICR_SetLocalUserData("LOCATION",sLoc) //save key record number
+		
+		local sSub = CheckForKey( { NAME = "SUBTOTAL" , MATCHNAME = true, FILE = 53, KEYTYPE = 6, MATCHNAME = true} ); //Create STS key
+		print("Sub Total STS key is record "+sSub)
+		ICR_SetLocalUserData("SUBTOTAL",sSub) //save key record number
+
+		ICR_SetLocalUserData("PRINT",0) //turn printing off
+		
+	}
+	
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function OnRunScriptKeyPress (nFile, nRecord, nNumber, nValue, nFlag)
+	{
+		if(nNumber == tNumber) //if our script
+			{
+				local sLoc = ICR_GetLocalUserData("LOCATION") //get location record number
+				ICR_KeyPress(53,261) //press customers
+				ICR_SetInput(2) //press 2
+				ICR_KeyPress(53,sLoc) //press location  = TAKEAWAY
+			}
+	}
+	
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function BeforeKeyPress(nFile, nRecord, nKeytype)
+	{
+		if(nFile == 52 && nRecord == 23)
+			{
+				local sSub = ICR_GetLocalUserData("SUBTOTAL") //get sub total record number
+				ICR_KeyPress(53, sSub) //press sub total
+				local tReason = ICR_GetAlphaDialog("Enter Reason", 30) //enter text for reason
+				print("Reason entered is " + tReason)
+				ICR_SetLocalUserData("TEXT",tReason) //save text
+				ICR_SetLocalUserData("PRINT",1) //turn printing on
+			}
+		if(nFile == 52 && nRecord == 24)
+			{
+				local tReason = ICR_GetAlphaDialog("Enter name", 30) //enter text for reason
+				print("Name entered is " + tReason)
+				ICR_SetLocalUserData("TEXT",tReason) //save text
+				ICR_SetLocalUserData("PRINT",2) //turn printing on
+			}
+		else
+			{
+				return true;
+			}
+	}
+	
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+	
+function PreSaleFinalised()
+	{
+		local tPrint = ICR_GetLocalUserData("PRINT") //get print setting
+		switch(tPrint)
+			{
+				case 0: 
+						break;
+				case 1:
+						local tReason = ICR_GetLocalUserData("TEXT") //get sub total record number
+						ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // Print top blank line #1
+						ICR_JournalLine(" ", 0, 0, 0, 100, 0); // Print top blank line #1
+						ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // Print top blank line #2
+						ICR_JournalLine(" ", 0, 0, 0, 100, 0); // Print top blank line #2
+						ICR_ReceiptLine("Discount Reason: " + tReason + "", 0, 0, 0, 100, 0); // Print total line
+						ICR_JournalLine("Discount Reason: " + tReason + "", 0, 0, 0, 100, 0); // Print total line
+						ICR_ReceiptLine("Total				£" + tReason + "", 0, 0, 0, 100, 0); // Print total line
+						ICR_JournalLine("Total				£" + tReason + "", 0, 0, 0, 100, 0); // Print total line							
+						ICR_SetLocalUserData("PRINT",0) //turn printing off
+						break;
+				case 2:
+						local tReason = ICR_GetLocalUserData("TEXT") //get sub total record number
+						ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // Print top blank line #1
+						ICR_JournalLine(" ", 0, 0, 0, 100, 0); // Print top blank line #1
+						ICR_ReceiptLine(" ", 0, 0, 0, 100, 0); // Print top blank line #2
+						ICR_JournalLine(" ", 0, 0, 0, 100, 0); // Print top blank line #2
+						ICR_ReceiptLine("It is " + tReason + "'s brithay!!", 0, 0, 0, 100, 0); // Print total line
+						ICR_JournalLine("It is " + tReason + "'s brithay!!", 0, 0, 0, 100, 0); // Print total line
+						ICR_ReceiptLine("Total				£" + tReason + "", 0, 0, 0, 100, 0); // Print total line
+						ICR_JournalLine("Total				£" + tReason + "", 0, 0, 0, 100, 0); // Print total line						
+						ICR_SetLocalUserData("PRINT",0) //turn printing off
+						break;						
+			}
+	}

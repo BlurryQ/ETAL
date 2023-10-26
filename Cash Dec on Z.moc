@@ -1,0 +1,226 @@
+﻿local bDebugPrinting = false;	// Set this false to disable all the debug printing in the output file
+
+dofile("etal\\lib\\keys.moc"); // Load Keys from lib (auto crate key)
+
+local wNumber = 31 // nNumber for float dec window
+local nReport = 211 //STS key for EoD
+local nMult = 189 //multiply key
+
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+
+ICR_SetLocalUserData("NNUMBER",wNumber,true) // Save nNumber locally
+local cDec = CheckForKey( { NAME = "CASH DECLORATION" , MATCHNAME = true, FILE = 53, KEYTYPE = 110, SCRIPTNUMBER = wNumber, MATCHVALUE = true} ); //Create STS key
+print("Cash Decloration STS key is record "+cDec)
+ICR_SetLocalUserData("STSKEY",cDec) // Save status key record number locally
+
+ICR_SetLocalUserData("CASHDEC", false, true); // Set float decloration to off
+
+local nONE = CheckForKey( { NAME = "1p" , MATCHNAME = true, FILE = 53, KEYTYPE = 217, VALUE = 1 , MATCHVALUE = true} ); //Create STS key
+print("1p record is  "+nONE)
+ICR_SetLocalUserData("nONE",nONE) // Save status key record number locally
+
+local nTWO = CheckForKey( { NAME = "2p" , MATCHNAME = true, FILE = 53, KEYTYPE = 217, VALUE = 2 , MATCHVALUE = true} ); //Create STS key
+print("2p record is  "+nTWO)
+ICR_SetLocalUserData("nTWO",nTWO) // Save status key record number locally
+
+local nFIVE = CheckForKey( { NAME = "5p" , MATCHNAME = true, FILE = 53, KEYTYPE = 217, VALUE = 5 , MATCHVALUE = true} ); //Create STS key
+print("5p record is  "+nFIVE)
+ICR_SetLocalUserData("nFIVE",nFIVE) // Save status key record number locally
+
+local nTEN = CheckForKey( { NAME = "10p" , MATCHNAME = true, FILE = 53, KEYTYPE = 217, VALUE = 10 , MATCHVALUE = true} ); //Create STS key
+print("10p record is  "+nTEN)
+ICR_SetLocalUserData("nTEN",nTEN) // Save status key record number locally
+
+local nTWENTY = CheckForKey( { NAME = "20p" , MATCHNAME = true, FILE = 53, KEYTYPE = 217, VALUE = 20 , MATCHVALUE = true} ); //Create STS key
+print("20p record is  "+nTWENTY)
+ICR_SetLocalUserData("nTWENTY",nTWENTY) // Save status key record number locally
+
+local nFIFTY = CheckForKey( { NAME = "50p" , MATCHNAME = true, FILE = 53, KEYTYPE = 217, VALUE = 50 , MATCHVALUE = true} ); //Create STS key
+print("50p record is  "+nFIFTY)
+ICR_SetLocalUserData("nFIFTY",nFIFTY) // Save status key record number locally
+
+local pONE = CheckForKey( { NAME = "£1" , MATCHNAME = true, FILE = 53, KEYTYPE = 217, VALUE = 100 , MATCHVALUE = true} ); //Create STS key
+print("£1 record is  "+pONE)
+ICR_SetLocalUserData("pONE",pONE) // Save status key record number locally
+
+local pTWO = CheckForKey( { NAME = "£2" , MATCHNAME = true, FILE = 53, KEYTYPE = 217, VALUE = 200 , MATCHVALUE = true} ); //Create STS key
+print("£2 record is  "+pTWO)
+ICR_SetLocalUserData("pTWO",pTWO) // Save status key record number locally
+
+local pFIVE = CheckForKey( { NAME = "£5" , MATCHNAME = true, FILE = 53, KEYTYPE = 217, VALUE = 500 , MATCHVALUE = true} ); //Create STS key
+print("£5 record is  "+pFIVE)
+ICR_SetLocalUserData("pFIVE",pFIVE) // Save status key record number locally
+
+local pTEN = CheckForKey( { NAME = "£10" , MATCHNAME = true, FILE = 53, KEYTYPE = 217, VALUE = 1000 , MATCHVALUE = true} ); //Create STS key
+print("£10 record is  "+pTEN)
+ICR_SetLocalUserData("pTEN",pTEN) // Save status key record number locally
+
+local pTWENTY = CheckForKey( { NAME = "£20" , MATCHNAME = true, FILE = 53, KEYTYPE = 217, VALUE = 2000 , MATCHVALUE = true} ); //Create STS key
+print("£20 record is  "+pTWENTY)
+ICR_SetLocalUserData("pTWENTY",pTWENTY) // Save status key record number locally
+
+local pFIFTY = CheckForKey( { NAME = "£50" , MATCHNAME = true, FILE = 53, KEYTYPE = 217, VALUE = 5000 , MATCHVALUE = true} ); //Create STS key
+print("£50 record is  "+pFIFTY)
+ICR_SetLocalUserData("pFIFTY",pFIFTY) // Save status key record number locally
+}
+
+/*-------------------------------------------------------------------------------------------------------*/
+	
+function OnRunScriptKeyPress (nFile, nRecord, nNumber, nValue, nFlag)
+	{
+		if(nNumber == wNumber)
+			{
+				local nEnabled = ICR_GetLocalUserData("CASHDEC")
+				if (nEnabled == true)
+					{
+						local pFIFTY = ICR_GetLocalUserData("pFIFTY") //Get £50 key
+						local tFIFTY = ICR_GetNumberDialog("How Many £50's?",0)
+							if(tFIFTY != 0)
+								{
+									ICR_SetInput(tFIFTY)
+									ICR_KeyPress(53,nMult)
+									ICR_KeyPress(53,pFIFTY)
+									print("£50 x " + tFIFTY + " = " + (50 * tFIFTY))
+								}
+						
+						local pTWENTY = ICR_GetLocalUserData("pTWENTY") //Get £20 key
+						local tTWENTY = ICR_GetNumberDialog("How Many £20's?",0)
+							if(tTWENTY != 0)
+								{
+									ICR_SetInput(tTWENTY)
+									ICR_KeyPress(53,nMult)
+									ICR_KeyPress(53,pTWENTY)
+									print("£20 x " + tTWENTY + " = " + (20 * tTWENTY))
+								}
+						
+						local pTEN = ICR_GetLocalUserData("pTEN") //Get £10 key
+						local tTEN = ICR_GetNumberDialog("How Many £10's?",0)
+							if(tTEN != 0)
+								{
+									ICR_SetInput(tTEN)
+									ICR_KeyPress(53,nMult)
+									ICR_KeyPress(53,pTEN)
+									print("£10 x " + tTEN + " = " + (10 * tTEN))			
+								}
+						
+						local pFIVE = ICR_GetLocalUserData("pFIVE") //Get £5 key
+						local tFIVE = ICR_GetNumberDialog("How Many £5's?",0)
+							if(tFIVE != 0)
+								{
+									ICR_SetInput(tFIVE)
+									ICR_KeyPress(53,nMult)
+									ICR_KeyPress(53,pFIVE)
+									print("£5 x " + tFIVE + " = " + (5 * tFIVE))
+								}
+										
+						local pTWO = ICR_GetLocalUserData("pTWO") //Get £2 key
+						local tTWO = ICR_GetNumberDialog("How Many £2's?",0)
+							if(tTWO != 0)
+								{
+									ICR_SetInput(tTWO)
+									ICR_KeyPress(53,nMult)
+									ICR_KeyPress(53,pTWO)
+									print("£2 x " + tTWO + " = " + (2 * tTWO))
+								}
+											
+						local pONE = ICR_GetLocalUserData("pONE") //Get £1 key
+						local tONE = ICR_GetNumberDialog("How Many £1's?",0)
+							if(tONE != 0)
+								{
+									ICR_SetInput(tONE)
+									ICR_KeyPress(53,nMult)
+									ICR_KeyPress(53,pONE)
+									print("£1 x " + tONE + " = " + (1 * tONE))
+								}
+						
+						local nFIFTY = ICR_GetLocalUserData("nFIFTY") //Get 50p key
+						local tFIFTY = ICR_GetNumberDialog("How Many 50p's?",0)
+							if(tFIFTY != 0)
+								{
+									ICR_SetInput(tFIFTY)
+									ICR_KeyPress(53,nMult)
+									ICR_KeyPress(53,nFIFTY)
+									print("50p x " + tFIFTY + " = " + (0.5 * tFIFTY))
+								}
+										
+						local nTWENTY = ICR_GetLocalUserData("nTWENTY") //Get 20p key
+						local tTWENTY = ICR_GetNumberDialog("How Many 20p's?",0)
+							if(tTWENTY != 0)
+								{
+									ICR_SetInput(tTWENTY)
+									ICR_KeyPress(53,nMult)
+									ICR_KeyPress(53,nTWENTY)
+									print("20p x " + tTWENTY + " = " + (0.2 * tTWENTY))
+								}
+										
+						local nTEN = ICR_GetLocalUserData("nTEN") //Get 10p key
+						local tTEN = ICR_GetNumberDialog("How Many 10p's?",0)
+							if(tTEN != 0)
+								{
+									ICR_SetInput(tTEN)
+									ICR_KeyPress(53,nMult)
+									ICR_KeyPress(53,nTEN)
+									print("10p x " + tTEN + " = " + (0.1 * tTEN))
+								}
+						
+						local nFIVE = ICR_GetLocalUserData("nFIVE") //Get 5p key
+						local tFIVE = ICR_GetNumberDialog("How Many 5p's?",0)
+							if(tFIVE != 0)
+								{
+									ICR_SetInput(tFIVE)
+									ICR_KeyPress(53,nMult)
+									ICR_KeyPress(53,nFIVE)
+									print("5p x " + tFIVE + " = " + (0.05 * tFIVE))
+								}
+									
+						local nTWO = ICR_GetLocalUserData("nTWO") //Get 2p key
+						local tTWO = ICR_GetNumberDialog("How Many 2p's?",0)
+							if(tTWO != 0)
+								{
+									ICR_SetInput(tTWO)
+									ICR_KeyPress(53,nMult)
+									ICR_KeyPress(53,nTWO)
+									print("2p x " + tTWO + " = " + (0.02 * tTWO))
+								}
+						
+						local nONE = ICR_GetLocalUserData("nONE") //Get 1p key
+						local tONE = ICR_GetNumberDialog("How Many 1p's?",0)
+							if(tONE != 0)
+								{
+									ICR_SetInput(tONE)
+									ICR_KeyPress(53,nMult)
+									ICR_KeyPress(53,nONE)
+									print("1p x " + tONE + " = " + (0.01 * tONE))
+								}
+						ICR_KeyPress(53,nReport) //press report key
+					}
+				else
+					{
+						ICR_KeyPress(53,nReport) //press report key
+					}
+			}
+	}
+	
+/*-------------------------------------------------------------------------------------------------------*/
+	
+function OnEnterPGMMenu(nSub) // When entering PGM 3
+	{
+		ICR_PurgeProgramSettings(); // Clear settings and repull data
+		switch(nSub)
+			{
+				case 0: // System settings
+					ICR_AdvertiseProgramSetting("Script Details", "SCRIPTVERINF"); // Show script info
+					ICR_AdvertiseProgramSetting("Enable Cash Decloration","CASHDEC"); // Enable Float Decloration sub menu
+					break;
+				default: 
+					ICR_AdvertiseProgramHeading("This menu doesn't exist"); // If they break my menus
+					break; // Stop
+			}
+	}
+	
+/*-------------------------------------------------------------------------------------------------------*/

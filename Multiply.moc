@@ -1,0 +1,37 @@
+local bDebugPrinting = false;	// set this false to disable all the debug printing in the output file
+
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+}
+///////////////////////////////////////////
+	
+local nProduct = 5; //Product
+function BeforeKeyPress(nFile, nRecord, nKeytype)
+
+{
+	if(nFile == 1 && nRecord == nProduct)// Check for PLU key on record declared above.
+	{
+		local nSold = ICR_GetNumberDialog("How many sold?", 0, false); //Quantity sold
+		ICR_SetInput(nSold); //Input previous figure
+		ICR_KeyPress(53,189); //Multiply
+		{
+			if(nSold <= 20) //If less than 20 sold continue
+			return true;
+		}
+		{
+			if(nSold >= 20) //More Than 20
+			ICR_KeyPress(53,192); //Subtotal
+			ICR_SetInput(nSold); //Amount Sold =
+			ICR_KeyPress(52,28); //Discount%
+		}
+
+	}
+	else
+	{
+	return true;
+	}
+}

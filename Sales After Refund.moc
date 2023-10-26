@@ -1,0 +1,26 @@
+local bDebugPrinting = true;	// set this false to disable all the debug printing in the output file
+
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+}
+///////////////////////////////////////////
+
+function BeforeKeyPress(nFile, nRecord, nKeyType)
+{
+	if(nKeyType == 72) //Clerk Sign On
+	{
+		local nMode = ICR_GetCurrentMode();
+		if(nMode == 3) //If refund mode
+		{
+			ICR_KeyPress(53, 101) // Sales Mode
+		}
+		else
+		{
+			return true;
+		}
+	}		
+}

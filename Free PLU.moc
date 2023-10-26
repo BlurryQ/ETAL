@@ -1,0 +1,35 @@
+local bDebugPrinting = false;	// set this false to disable all the debug printing in the output file
+
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+}
+///////////////////////////////////////////
+
+function AfterKeyPress(nFile, nRecord, nKeyType)
+{
+	if((nFile == 1)&&(nRecord == 2)) // If PLU 2
+	
+	{
+		local nYesNo = ICR_MessageBox ("Would you like a Twisted Nose?", "", "Freebie", 1) //Question
+		
+		
+			if(nYesNo == 1) // If yes
+			
+			{
+				ICR_KeyPress (1,6); //PLU 6
+				ICR_SetInput(100); // Discount value
+				ICR_KeyPress(52,28); //Discount key
+			}		
+			
+			if(nYesNo == 0) //If no
+			
+			{
+				return true;
+			}
+		
+	}
+}

@@ -1,0 +1,1209 @@
+﻿local bDebugPrinting = false;	// Set this false to disable all the debug printing in the output file
+
+dofile("etal\\lib\\keys.moc"); // Load Keys from lib (auto crate key)
+
+local wNumber = 30 // nNumber for float dec window
+local cdNumber = 31 // nNumber for float dec window
+
+local nDenom = []; // Array for enabled denominations
+local fTotal = []; // Array for total
+
+local cDenom = []; // Array for cash dec figures
+
+local nWindowID = 0; // No ID for Window
+local nWindowDimensions = 0; // No dimensions for Window
+local tWindowID = 0; // No ID for help Window
+local tWindowDimensions = 0; // No dimensions for help Window
+enum EVENT {DOWN = 0, UP = 1, MOVE = 2}; 
+local bSelect = 0; // Set selected box to 0
+local bLocation = {}; // Create empty table
+
+local wHeight = 540 // Window height
+local xPage = 40 // Starting x Pos
+local yPage = 40 // Starting y pos
+local wStart = 140 // Width for value entry
+local hStart = 30 // Height for boxes
+
+local cBlack = 0x000000 // Black colour
+local cWhite = 0xFFFFFF // White colour
+local cRed = 0xff0000 // Red colour
+local cGreen = 0x00ff00 // Green Colour
+local cGrey = 0x808080 // Grey Colour
+
+local cWindowID = 0; // No ID for Window
+local cWindowDimensions = 0; // No dimensions for Window
+local dWindowID = 0; // No ID for help Window
+local dWindowDimensions = 0; // No dimensions for help Window
+
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+
+nWindowID = ICR_SalesModeWindow_Add("window.xml", true); // Adding window.xml to script - true = Home Mode
+nWindowDimensions = ICR_GetWindowDimensions(nWindowID); // Get dimensions from the xml
+local nWindowEnable = ICR_Window_Enable (nWindowID,false); // Turn window off
+
+tWindowID = ICR_SalesModeWindow_Add("tips.xml", true); // Adding window.xml to script - true = Home Mode
+tWindowDimensions = ICR_GetWindowDimensions(tWindowID); // Get dimensions from the xml
+local tWindowEnable = ICR_Window_Enable (tWindowID,false); // Turn window off
+
+cWindowID = ICR_SalesModeWindow_Add("window.xml", true); // Adding window.xml to script - true = Home Mode
+cWindowDimensions = ICR_GetWindowDimensions(cWindowID); // Get dimensions from the xml
+local cWindowEnable = ICR_Window_Enable (cWindowID,false); // Turn window off
+
+dWindowID = ICR_SalesModeWindow_Add("tips.xml", true); // Adding window.xml to script - true = Home Mode
+dWindowDimensions = ICR_GetWindowDimensions(dWindowID); // Get dimensions from the xml
+local dWindowEnable = ICR_Window_Enable (dWindowID,false); // Turn window off
+
+ICR_SetLocalUserData("NNUMBER",wNumber,true) // Save nNumber locally
+local fDec = CheckForKey( { NAME = "FLOAT DECLORATION" , MATCHNAME = true, FILE = 53, KEYTYPE = 110, SCRIPTNUMBER = wNumber, MATCHVALUE = true} ); //Create STS key
+print("Float Decloration STS key is record "+fDec)
+ICR_SetLocalUserData("STSKEY",fDec) // Save status key record number locally
+
+local tDec = CheckForKey( { NAME = "FLOAT DECLORATION" , MATCHNAME = true, FILE = 52, KEYTYPE = 21, VALUE = 1, MATCHVALUE = true} ); //Create TRN key
+print("Float Decloration TRN key is record "+tDec)
+ICR_SetLocalUserData("TRNKEY",tDec) // Save transaction key record number locally
+
+ICR_SetLocalUserData("FLOATDEC", 3, true); // Set float decloration to off
+ICR_SetLocalUserData("FLOATPRINT", false) // Set print float decloration to off
+ICR_SetLocalUserData("SIGSTRIP", false, true) // Set signature strip to off
+
+ICR_SetLocalUserData("ENFIFTY", false, true); // Disable £50
+ICR_SetLocalUserData("ENTWENTY", true, true); // Enable £20
+ICR_SetLocalUserData("ENTEN", true, true); // Enable £10
+ICR_SetLocalUserData("ENFIVE", true, true); // Enable £5
+ICR_SetLocalUserData("ENTWO", true, true); // Enable £2
+ICR_SetLocalUserData("ENONE", true, true); // Enable £1
+ICR_SetLocalUserData("ENFIFTYP", true, true); // Enable 50p
+ICR_SetLocalUserData("ENTWENTYP", true, true); // Enable 20p
+ICR_SetLocalUserData("ENTENP", true, true); // Enable 10p
+ICR_SetLocalUserData("ENFIVEP", false, true); // Disable 5p
+ICR_SetLocalUserData("ENTWOP", false, true); // Disable 2p
+ICR_SetLocalUserData("ENONEP", false, true); // Disable 1p
+
+ICR_SetLocalUserData("MANAGERS",false,true); // Disable managers only 
+ICR_SetLocalUserData("ACCESS",true); // Disable access
+
+ICR_SetLocalUserData("HELP",false); // Turn help off
+ICR_SetLocalUserData("GAP",0) // Set gap size
+
+ICR_SetLocalUserData("NNUMBER",wNumber,true) // Save nNumber locally
+local cDec = CheckForKey( { NAME = "CASH DECLORATION" , MATCHNAME = true, FILE = 53, KEYTYPE = 110, SCRIPTNUMBER = wNumber, MATCHVALUE = true} ); //Create STS key
+print("Cash Decloration STS key is record "+cDec)
+ICR_SetLocalUserData("STSKEY",cDec) // Save status key record number locally
+
+ICR_SetLocalUserData("CASHDEC", false, true); // Set float decloration to off
+
+local nONE = CheckForKey( { NAME = "1p" , MATCHNAME = true, FILE = 53, KEYTYPE = 217, VALUE = 1 , MATCHVALUE = true} ); //Create STS key
+print("1p record is  "+nONE)
+ICR_SetLocalUserData("cDEC12",nONE) // Save status key record number locally
+
+local nTWO = CheckForKey( { NAME = "2p" , MATCHNAME = true, FILE = 53, KEYTYPE = 217, VALUE = 2 , MATCHVALUE = true} ); //Create STS key
+print("2p record is  "+nTWO)
+ICR_SetLocalUserData("cDEC11",nTWO) // Save status key record number locally
+
+local nFIVE = CheckForKey( { NAME = "5p" , MATCHNAME = true, FILE = 53, KEYTYPE = 217, VALUE = 5 , MATCHVALUE = true} ); //Create STS key
+print("5p record is  "+nFIVE)
+ICR_SetLocalUserData("cDEC10",nFIVE) // Save status key record number locally
+
+local nTEN = CheckForKey( { NAME = "10p" , MATCHNAME = true, FILE = 53, KEYTYPE = 217, VALUE = 10 , MATCHVALUE = true} ); //Create STS key
+print("10p record is  "+nTEN)
+ICR_SetLocalUserData("cDEC9",nTEN) // Save status key record number locally
+
+local nTWENTY = CheckForKey( { NAME = "20p" , MATCHNAME = true, FILE = 53, KEYTYPE = 217, VALUE = 20 , MATCHVALUE = true} ); //Create STS key
+print("20p record is  "+nTWENTY)
+ICR_SetLocalUserData("cDEC8",nTWENTY) // Save status key record number locally
+
+local nFIFTY = CheckForKey( { NAME = "50p" , MATCHNAME = true, FILE = 53, KEYTYPE = 217, VALUE = 50 , MATCHVALUE = true} ); //Create STS key
+print("50p record is  "+nFIFTY)
+ICR_SetLocalUserData("cDEC7",nFIFTY) // Save status key record number locally
+
+local pONE = CheckForKey( { NAME = "£1" , MATCHNAME = true, FILE = 53, KEYTYPE = 217, VALUE = 100 , MATCHVALUE = true} ); //Create STS key
+print("£1 record is  "+pONE)
+ICR_SetLocalUserData("cDEC6",pONE) // Save status key record number locally
+
+local pTWO = CheckForKey( { NAME = "£2" , MATCHNAME = true, FILE = 53, KEYTYPE = 217, VALUE = 200 , MATCHVALUE = true} ); //Create STS key
+print("£2 record is  "+pTWO)
+ICR_SetLocalUserData("cDEC5",pTWO) // Save status key record number locally
+
+local pFIVE = CheckForKey( { NAME = "£5" , MATCHNAME = true, FILE = 53, KEYTYPE = 217, VALUE = 500 , MATCHVALUE = true} ); //Create STS key
+print("£5 record is  "+pFIVE)
+ICR_SetLocalUserData("cDEC4",pFIVE) // Save status key record number locally
+
+local pTEN = CheckForKey( { NAME = "£10" , MATCHNAME = true, FILE = 53, KEYTYPE = 217, VALUE = 1000 , MATCHVALUE = true} ); //Create STS key
+print("£10 record is  "+pTEN)
+ICR_SetLocalUserData("cDEC3",pTEN) // Save status key record number locally
+
+local pTWENTY = CheckForKey( { NAME = "£20" , MATCHNAME = true, FILE = 53, KEYTYPE = 217, VALUE = 2000 , MATCHVALUE = true} ); //Create STS key
+print("£20 record is  "+pTWENTY)
+ICR_SetLocalUserData("cDEC2",pTWENTY) // Save status key record number locally
+
+local pFIFTY = CheckForKey( { NAME = "£50" , MATCHNAME = true, FILE = 53, KEYTYPE = 217, VALUE = 5000 , MATCHVALUE = true} ); //Create STS key
+print("£50 record is  "+pFIFTY)
+ICR_SetLocalUserData("cDEC1",pFIFTY) // Save status key record number locally
+
+ICR_SetLocalUserData("WINDOW",0); // Turn window off
+}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function AfterSignOn(nclerk)
+	{
+		local tManagers = ICR_GetLocalUserData("MANAGERS"); // Get Manager settings
+		ICR_StartTimer(15000) // Start timer (1000 = second)
+		
+		if(tManagers == true) // If managers only enabled
+			{
+			   local tClerk = ICR_GetPGMData(5,nclerk); // Check clerk flags
+		   
+			   if (tClerk.OPERATION & 0x0008) // Check if manager
+					{
+						ICR_SetLocalUserData("ACCESS",true); // Enable access
+						print("ACCESS GRANTED");
+					}
+				else
+					{
+						ICR_SetLocalUserData("ACCESS",false); // Disable access
+						print("ACCESS DENIED");
+					}
+			}
+	}
+	
+/*-------------------------------------------------------------------------------------------------------*/
+
+function OnTimer(nTimerID, nSystemTime) // When timer has hit designated time
+	{
+		local nClerk = ICR_GetCurrentClerk() // Get current clerk info
+		if(nClerk == 0) // If no clerk
+			{
+				local nWindow = ICR_GetLocalUserData("WINDOW") //Get Window info
+				if(nWindow != 0)
+					{
+						ICR_Window_Enable(nWindowID, false); // Close window
+						ICR_Window_Enable(tWindowID, false); // Close help window				
+						ICR_Window_Enable(cWindowID, false); // Close window
+						ICR_Window_Enable(dWindowID, false); // Close help window
+						ICR_SetLocalUserData("HELP",false); // Turn help off
+						ICR_SetLocalUserData("WINDOW",0); // Turn window off
+						ICR_RedrawScreen(); // Redraw screen 
+					}
+				ICR_StopTimer(nTimerID) // Stop timer
+			}
+	}
+
+/*-------------------------------------------------------------------------------------------------------*/
+	
+function OnRunScriptKeyPress (nFile, nRecord, nNumber, nValue, nFlag)
+	{
+		if(nNumber == wNumber) // If our key
+			{
+				local dSettings = ICR_GetLocalUserData("FLOATDEC") // Get float decloration setting (full, denomination or off)
+				local tAccess = ICR_GetLocalUserData("ACCESS"); // Get Access settings
+				
+				if(tAccess == true) // If clerk has access
+					{
+						switch(dSettings) 
+							{
+								case 1: // If full value
+										ICR_SetLocalUserData("FLOATPRINT",true) // Set print float decloration to on
+										local nResult = ICR_GetNumberDialog("Enter float value",0) // Pop up numberpad
+										if(nResult == 0) // If nothing entered
+											{
+												ICR_Sound(2)// Error Noise
+												ICR_MessageBox("No value entered","Cancelling decloration","0",0) // Message explaining error
+												return false; // Do not proceed
+												break; // stop 
+											}
+											
+										local nFloat = format("%0.2f",nResult.tofloat()/100) // Format to 2 decimal places
+										local mResult = ICR_MessageBox("You are declaring £" + nFloat + " in your float","Is this correct?","Float",1) // Message confirming amount
+										if(mResult == 1) // If yes
+											{
+												local tKey = ICR_GetLocalUserData("TRNKEY") // Get transaction key record number locally
+												ICR_SetInput(nResult) // Enter value in input
+												ICR_KeyPress(52,tKey) // Press Float Dec transaction key
+											}	
+										break; // Stop
+								case 2: // If denominations
+										ICR_SetLocalUserData("WINDOW",1); // Turn  float dec window on
+										nDenom.clear() // Clear array
+										nDenom.push(0) // Push 0 into array
+										
+										ICR_SetLocalUserData("FLOATPRINT",true) // Set print float decloration to on
+										local eFIFTY = ICR_GetLocalUserData("ENFIFTY"); // Get £50 PGM Settings
+										local eTWENTY  = ICR_GetLocalUserData("ENTWENTY"); // Get £20 PGM Settings
+										local eTEN  = ICR_GetLocalUserData("ENTEN"); // Get £10 PGM Settings
+										local eFIVE  = ICR_GetLocalUserData("ENFIVE"); // Get £5 PGM Settings
+										local eTWO  = ICR_GetLocalUserData("ENTWO"); // Get £2 PGM Settings
+										local eONE  = ICR_GetLocalUserData("ENONE"); // Get £1 PGM Settings
+										local eFIFTYP  = ICR_GetLocalUserData("ENFIFTYP"); // Get 50p PGM Settings
+										local eTWENTYP  = ICR_GetLocalUserData("ENTWENTYP"); // Get 50p PGM Settings
+										local eTENP  = ICR_GetLocalUserData("ENTENP"); // Get 50p PGM Settings
+										local eFIVEP  = ICR_GetLocalUserData("ENFIVEP"); // Get 5p PGM Settings
+										local eTWOP  = ICR_GetLocalUserData("ENTWOP"); // Get 2p PGM Settings
+										local eONEP  = ICR_GetLocalUserData("ENONEP"); // Get 1p PGM Settings
+										
+										if(eFIFTY == false && eTWENTY == false && eTEN == false && eFIVE == false && eTWO == false && eONE == false && eFIFTYP == false && eTWENTYP == false && eTENP == false && eFIVEP == false && eTWOP == false && eONEP == false) // If all denominations are off
+											{
+											ICR_Sound(2)// Error Noise
+											ICR_MessageBox("No denominations have been enabled!","Please enable in PGM 3","Error",0) // Message explaining error
+											return false; // Do not proceed
+											break; // Stop												
+											}
+										
+										if(eFIFTY == true) // If enabled 
+											{
+												nDenom.push("£50") // Push name
+												nDenom.push("5000") // Push value
+											}
+										if(eTWENTY == true) // If enabled 
+											{
+												nDenom.push("£20") // Push name
+												nDenom.push("2000") // Push value
+											}
+										if(eTEN == true) // If enabled 
+											{
+												nDenom.push("£10") // Push name
+												nDenom.push("1000") // Push value
+											}
+										if(eFIVE == true) // If enabled 
+											{
+												nDenom.push("£5") // Push name
+												nDenom.push("500") // Push value
+											}
+										if(eTWO == true) // If enabled 
+											{
+												nDenom.push("£2") // Push name
+												nDenom.push("200") // Push value
+											}
+										if(eONE == true) // If enabled 
+											{
+												nDenom.push("£1") // Push name
+												nDenom.push("100") // Push value
+											}
+										if(eFIFTYP == true) // If enabled 
+											{
+												nDenom.push("50p") // Push name
+												nDenom.push("50") // Push value
+											}
+										if(eTWENTYP == true) // If enabled 
+											{
+												nDenom.push("20p") // Push name
+												nDenom.push("20") // Push value
+											}
+										if(eTENP == true) // If enabled 
+											{
+												nDenom.push("10p") // Push name
+												nDenom.push("10") // Push value
+											} 
+										if(eFIVEP == true) // If enabled 
+											{
+												nDenom.push("5p") // Push name
+												nDenom.push("5") // Push value
+											}
+										if(eTWOP == true) // If enabled 
+											{
+												nDenom.push("2p") // Push name
+												nDenom.push("2") // Push value
+											}
+										if(eONEP == true) // If enabled 
+											{
+												nDenom.push("1p") // Push name
+												nDenom.push("1") // Push value
+											}
+												
+										local nLines = (nDenom.len() - 1) / 2 // Work out total enabled values
+										print("Total number of lines required = "+nLines)
+										
+										for(local nCount = 1; nCount <= nLines; nCount++) // Count up
+											{
+												local vName = "VAL"+nCount // Create name to save value 
+												ICR_SetLocalUserData(vName,0) // Save value locally
+												local qName = "QTY"+nCount //Create name to save quantity
+												ICR_SetLocalUserData(qName,0) // Save quantity locally
+											}
+										
+										local gLines = nLines + 2 // Calculate total lines
+										local hGap = wHeight / gLines // Calculate gap size
+										ICR_SetLocalUserData("GAP",hGap) // Set gap size locally
+								
+										ICR_Window_Enable (nWindowID,true) // Open window
+										ICR_RedrawScreen(); // Redraw window
+										break; // Stop
+								case 3: // If off
+										ICR_Sound(2)//Error Noise
+										ICR_MessageBox("This function has been disabled!","Please enable in PGM 3","Error",0) // Message explaining error
+										return false; // Do not proceed
+										break; // Stop 
+							}
+					}
+				else
+					{
+						ICR_Sound(2)// Error Noise
+						ICR_MessageBox("You do not have permission to do this","Managers Only","Error",0); // Message explaining error
+						return false; // Do not proceed
+					}
+			}
+		if(nNumber == cdNumber) // If our key
+			{
+				local dSettings = ICR_GetLocalUserData("CASHDEC") // Get float decloration setting (full, denomination or off)
+				
+				if(dSettings == true) // If enabled
+					{	
+						ICR_SetLocalUserData("WINDOW",2); // Turn cash dec window on
+						
+						cDenom.clear() // Clear array
+						cDenom.push(0) // Push 0 into array
+					
+						cDenom.push("£50")
+						cDenom.push(5000)
+						cDenom.push("£20")
+						cDenom.push(2000)
+						cDenom.push("£10")
+						cDenom.push(1000)
+						cDenom.push("£5")
+						cDenom.push(500)
+						cDenom.push("£2")
+						cDenom.push(200)
+						cDenom.push("£1")
+						cDenom.push(100)
+						cDenom.push("50p")
+						cDenom.push(50)
+						cDenom.push("20p")
+						cDenom.push(20)
+						cDenom.push("10p")
+						cDenom.push(10)
+						cDenom.push("5p")
+						cDenom.push(5)
+						cDenom.push("2p")
+						cDenom.push(2)					
+						cDenom.push("1p")
+						cDenom.push(1)
+						
+						local nLines = (cDenom.len() - 1) / 2 // Work out total enabled values
+						print("Total number of lines required = "+nLines)
+						
+						for(local nCount = 1; nCount <= nLines; nCount++) // Count up
+							{
+								local vName = "VAL"+nCount // Create name to save value 
+								ICR_SetLocalUserData(vName,0) // Save value locally
+								local qName = "QTY"+nCount //Create name to save quantity
+								ICR_SetLocalUserData(qName,0) // Save quantity locally
+							}
+						
+						local gLines = nLines + 2 // Calculate total lines
+						local hGap = wHeight / gLines // Calculate gap size
+						ICR_SetLocalUserData("GAP",hGap) // Set gap size locally
+				
+						ICR_Window_Enable (cWindowID,true) // Open window
+						ICR_RedrawScreen(); // Redraw window
+					}
+				else
+					{
+						ICR_Sound(2)//Error Noise
+						ICR_MessageBox("This function has been disabled!","Please enable in PGM 3","Error",0) // Message explaining error
+						return false; // Do not proceed
+					}
+			}
+	}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function BeforeKeyPress(nFile, nRecord, nKeytype)
+	{
+		local tFloatDec = ICR_GetLocalUserData("FLOATDEC"); // Get float decloration setting (full, denomination or off)
+		if(tFloatDec == 2) // If denomination float decloration
+			{
+				if(nFile == 1 || nFile == 51 || nFile == 52 || nFile == 53) // If any key
+					{
+						ICR_SetLocalUserData("FLOATPRINT",false) // Set print float decloration to off
+						ICR_Window_Enable (nWindowID,false) // Close window
+						ICR_Window_Enable (tWindowID,false) // Close window
+						ICR_SetLocalUserData("WINDOW",0); // Turn window off
+						ICR_RedrawScreen(); // Redraw window
+						return true; // Carry on
+					}
+			}
+		local tCashDec = ICR_GetLocalUserData("CASHDEC"); // Get cash decloration setting (full, denomination or off)
+		if(tCashDec == true) // If cash decloration enabled
+			{
+				if(nFile == 1 || nFile == 51 || nFile == 52 || nFile == 53) // If any key
+					{
+						ICR_Window_Enable (cWindowID,false) // Close window
+						ICR_Window_Enable (dWindowID,false) // Close window
+						ICR_SetLocalUserData("WINDOW",0); // Turn window off
+						ICR_RedrawScreen(); // Redraw window
+						return true; // Carry on
+					}
+				else
+					{
+						return true; // Carry on
+					}
+			}
+		else
+			{
+				return true; // Carry on
+			}
+	}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function PaintWindow() // Painting Float Decloration Window
+	{					
+		local nLines = (nDenom.len() - 1) / 2 // Work out total enabled values
+		
+		local yBox = yPage // Starting y value
+		
+		local sFont = ICR_CreateFont("Arial", 18, true); // Setting font
+		ICR_SelectFont(sFont) // Selecting font		
+		ICR_SetText_VAlign(1); // Centre alignment
+		ICR_SetText_HAlign(1); // Centre alignment	
+		
+		local bFont = ICR_CreateFont("Arial", 22, true,false,true); // Setting font
+		ICR_SelectFont(bFont) // Selecting font
+		ICR_SetText_Colour(cBlack); // Set text colour = black
+		ICR_SetText_VAlign(1); // Centre alignment
+		ICR_SetText_HAlign(1); // Centre alignment	
+		
+		ICR_DrawText(5 * xPage, yBox / 2, "FLOAT DECLARATION"); // Draw title	
+		
+		local aHelp = ICR_GetLocalUserData("HELP") // Get help settings locally
+		if(aHelp == false) //If help window off
+			{
+				ICR_SelectFont(sFont) // Selecting font
+				ICR_DrawBox(9 * xPage, yPage / 4, wStart / 3, hStart * 0.75, cGrey); // Draw a grey box
+				ICR_DrawText(9 * xPage + wStart  /  6, yPage / 4 + hStart * 0.75 / 2, "HELP") // Draw HELP
+				if(bSelect == 17) // If this box is selected
+							{
+								ICR_DrawFrame(9 * xPage, yPage / 4, wStart / 3, hStart * 0.75, 3, cBlack); // When selected draw 3px black frame
+							}
+						bLocation[17] <- {"LEFT": 9 * xPage, "TOP": yPage / 4, "BOTTOM": yPage / 4 + hStart * 0.75, "RIGHT": 9 * xPage + wStart / 3}; // Save location of box
+			}
+		else // If help window on
+			{
+				ICR_SelectFont(sFont) // Selecting font
+				ICR_DrawBox(9 * xPage, yPage / 4, wStart / 3, hStart * 0.75, cBlack); // Draw a black box
+				ICR_DrawText(9 * xPage + wStart  /  6, yPage / 4 + hStart * 0.75 / 2, "HELP") // Draw HELP
+				if(bSelect == 17) // If this box is selected
+							{
+								ICR_DrawFrame(9 * xPage, yPage / 4, wStart / 3, hStart * 0.75, 3, cGrey); // When selected draw 3px grey frame
+							}
+						bLocation[17] <- {"LEFT": 9 * xPage, "TOP": yPage / 4, "BOTTOM": yPage / 4 + hStart * 0.75, "RIGHT": 9 * xPage + wStart / 3}; // Save location of box
+			}
+			
+		local tFont = ICR_CreateFont("Arial", 22); // Setting font
+		ICR_SelectFont(tFont); // Selecting font
+		ICR_SetText_VAlign(1); // Centre alignment	
+		ICR_SetText_HAlign(1); // Centre alignment	
+
+		local nGap = ICR_GetLocalUserData("GAP") // Set gap size
+		
+		for(local nRows = 1; nRows <= nLines; nRows++) // Count up
+			{	
+				local dName = "VAL"+nRows // Create value names
+				local rValue = ICR_GetLocalUserData(dName) // Get values locally
+				local nValue = format("%0.2f",rValue.tofloat()/100) // Format to 2 decimal places
+				
+				local qName = "QTY"+nRows // Create quantity names
+				local qValue = ICR_GetLocalUserData(qName) // Get quantity locally
+														
+				ICR_SetText_Colour(cBlack); // Set text colour = black
+				ICR_DrawText(xPage, yPage / 2 +  nRows * nGap,nDenom[2 * nRows+ - 1]); // Text for value names
+				ICR_DrawText(2 * xPage, yPage / 2 + nRows * nGap, "x"); // Draw x
+				ICR_DrawText(3 * xPage, yPage / 2 + nRows * nGap , qValue); // Text for quantity names
+				ICR_DrawText(4 * xPage, yPage / 2 + nRows * nGap , "="); // Draw =
+				
+				ICR_SetText_Colour(cWhite); // Set text colour = white
+				ICR_DrawBox(5 * xPage,yPage / 2 + nRows * nGap - hStart / 2, wStart, hStart, cBlack); // Draw a black box
+				ICR_DrawText(5 * xPage + wStart / 2, yPage / 2 + nRows * nGap,"£"+nValue); // Show value in box 
+				
+				if(bSelect == nRows) // If this box is selected
+					{
+						ICR_DrawFrame(5 * xPage, yPage / 2 + nRows * nGap - hStart / 2, wStart, hStart, 3, cRed); // When selected draw 3px red frame
+					}
+				bLocation[nRows] <- {"LEFT": 5 * xPage, "TOP": yPage / 2 + nRows * nGap - hStart / 2, "BOTTOM": yPage / 2 + nRows * nGap + hStart / 2, "RIGHT": 5 * xPage + wStart}; // Save location of box
+				
+				
+				if(rValue > 0)	// If value inputted is more than 0		
+					{
+						ICR_SetText_Colour(cBlack); // Set text colour = black
+						ICR_DrawBox(9 * xPage, yPage / 2 + nRows * nGap - hStart / 2 + 3, wStart / 7, hStart * 0.75, cRed); // Draw a red box
+						ICR_DrawText(9 * xPage + wStart / 14, yPage / 2 + nRows * nGap - hStart / 2 + 3 + hStart * 0.75 / 2,"X");  // Draw X
+				
+						if(bSelect == 20 + nRows) // If this box is selected
+							{
+								ICR_DrawFrame(9 * xPage, yPage / 2 + nRows * nGap + 3, wStart / 7, hStart * 0.75, 3, cBlack); // When selected draw 3px black frame
+							}
+						bLocation[20 + nRows] <- {"LEFT": 9 * xPage, "TOP": yPage / 2 + nRows * nGap, "BOTTOM": yPage / 2 + nRows * nGap + hStart, "RIGHT": 9 * xPage + wStart}; // Save location of box				
+					}
+					
+			}		
+			
+		fTotal.clear() // Clear array
+		for(local nTotal = 1; nTotal <= nLines; nTotal++) // Count up
+			{
+				local dName = "VAL"+nTotal // Create value name
+				local nValue = ICR_GetLocalUserData(dName) // Get value locally
+				fTotal.push(nValue) // Push value to array
+			}
+						
+		foreach(idx,val in fTotal) // For each value
+			{
+			print("index "+idx+" has value "+val) // Print value
+			}
+			
+		local rTotal = 0 // Set total to 0
+		for(local nCount = 0; nCount < fTotal.len() ; nCount++) // Count up
+			{
+				rTotal += fTotal[nCount] // Keep adding values in array
+			}	
+		
+		local tValue = format("%0.2f",rTotal.tofloat()/100) // Format value to 2 decimal places
+		ICR_SetLocalUserData("TOTAL",tValue) // Saving total
+
+		ICR_SelectFont(bFont) // Selecting font
+		ICR_SetText_Colour(cBlack); // Set text colour = black
+		ICR_DrawText(5 * xPage + wStart / 2, yPage / 2 + (nLines + 0.5) * nGap + hStart / 2, "£" + tValue); // Show total value in box
+		
+		ICR_DrawBox(3 * xPage,  yPage / 2 + (nLines + 1.5) * nGap, wStart * 0.75, hStart, cGreen); // Draw a green box
+		ICR_DrawText(3 * xPage + wStart * 0.75 /  2,  yPage / 2 + (nLines + 1.5) * nGap + hStart / 2, "CONFIRM") // Draw CONFIRM
+		if(bSelect == 15) // If this box is selected
+					{
+						ICR_DrawFrame(3 * xPage, yPage / 2 + (nLines + 1.5) * nGap, wStart * 0.75, hStart, 3, cBlack); // When selected draw 3px black frame
+					}
+				bLocation[15] <- {"LEFT": 3 * xPage, "TOP": yPage / 2 + (nLines + 1.5) * nGap, "BOTTOM": yPage / 2 + (nLines + 1.5) * nGap + hStart, "RIGHT": 3 * xPage + wStart * 0.75}; // Save location of box
+
+		ICR_SelectFont(bFont) // Selecting font		
+		ICR_DrawBox(8 * xPage, yPage / 2 + (nLines + 1.5) * nGap, wStart * 0.6, hStart, cRed); // Draw a red box
+		ICR_DrawText(8 * xPage + wStart * 0.3, yPage / 2 + (nLines + 1.5) * nGap + hStart / 2, "CANCEL") // Draw CANCEL
+		if(bSelect == 19) // If this box is selected
+					{
+						ICR_DrawFrame(8 * xPage, yPage / 2 + (nLines + 1.5) * nGap, wStart * 0.6, hStart, 3, cBlack); // When selected draw 3px black frame
+					}
+				bLocation[19] <- {"LEFT": 8 * xPage, "TOP": yPage / 2 + (nLines + 1.5) * nGap, "BOTTOM": yPage / 2 + (nLines + 1.5) * nGap + hStart, "RIGHT": 8* xPage + wStart * 0.6}; // Save location of box
+	}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function PaintHelp() // Painting Help Window
+	{	
+		local bFont = ICR_CreateFont("Arial", 22, true,false,true); // Setting font
+		ICR_SelectFont(bFont) // Selecting font
+		ICR_SetText_Colour(cBlack); // Set text colour = black
+		ICR_SetText_VAlign(1); // Centre alignment
+		ICR_SetText_HAlign(1); // Centre alignment	
+	
+		local tFont = ICR_CreateFont("Arial", 22); // Setting font
+		ICR_SelectFont(tFont); // Selecting font
+		ICR_SetText_VAlign(1); // Centre alignment
+		ICR_SetText_HAlign(1); // Centre alignment	
+		ICR_SetText_Colour(cBlack); // Colour = black
+		
+		ICR_DrawText(xPage, yPage / 2, "Click on"); // Draw words
+		ICR_DrawText(5.4 * xPage, yPage / 2, "to enter value"); // Draw words
+		
+		ICR_DrawText(xPage, 3 * yPage / 2, "Click on"); // Draw words
+		ICR_DrawText(4.25 * xPage, 3 * yPage / 2, "to cancel value"); // Draw words
+		
+		ICR_DrawText(xPage, 5 * yPage / 2, "Click on"); // Draw words
+		ICR_DrawText(7 * xPage, 5 * yPage / 2, "to cancel float decloration"); // Draw words
+		
+		ICR_DrawText(xPage, 7 * yPage / 2, "Click on"); // Draw words
+		ICR_DrawText(7.5 * xPage, 7 * yPage / 2, "to finalise float decloration"); // Draw words
+		
+		ICR_DrawBox(2 * xPage, 2.5 * yPage / 2, wStart / 7, hStart * 0.75, cRed); // Draw a red box
+		ICR_DrawText(2 * xPage + wStart / 14, 2.5 * yPage / 2 + hStart * 0.75 / 2,"X");  // Draw X		
+		
+		ICR_SelectFont(bFont) // Selecting font
+		ICR_DrawBox(2 * xPage, 4.25 * yPage / 2, wStart * 0.6, hStart, cRed); // Draw a red box
+		ICR_DrawText(2 * xPage + wStart * 0.3, 4.25 * yPage / 2 + hStart / 2, "CANCEL") // Draw CANCEL
+
+		ICR_DrawBox(2 * xPage, 6.25 * yPage / 2 , wStart * 0.75, hStart, cGreen); // Draw a green box
+		ICR_DrawText(2 * xPage + wStart * 0.75 /  2, 6.25 * yPage / 2 + hStart / 2, "CONFIRM") // Draw CONFIRM
+
+		ICR_SelectFont(tFont); // Selecting font
+		ICR_SetText_Colour(cWhite); //// Set text colour = white
+		ICR_DrawBox(2 * xPage, yPage / 6, wStart / 2, hStart, cBlack); // Draw a black box
+		ICR_DrawText(2 * xPage + wStart / 4, yPage / 8 + hStart / 2,"£0.00"); // Show value in box 
+						
+	}
+		
+/*-------------------------------------------------------------------------------------------------------*/
+
+function PaintDecWindow() // Painting Float Decloration Window
+	{					
+		local nLines = (cDenom.len() - 1) / 2 // Work out total enabled values
+		
+		local yBox = yPage // Starting y value
+		
+		local sFont = ICR_CreateFont("Arial", 18, true); // Setting font
+		ICR_SelectFont(sFont) // Selecting font		
+		ICR_SetText_VAlign(1); // Centre alignment
+		ICR_SetText_HAlign(1); // Centre alignment	
+		
+		local bFont = ICR_CreateFont("Arial", 22, true,false,true); // Setting font
+		ICR_SelectFont(bFont) // Selecting font
+		ICR_SetText_Colour(cBlack); // Set text colour = black
+		ICR_SetText_VAlign(1); // Centre alignment
+		ICR_SetText_HAlign(1); // Centre alignment	
+		
+		ICR_DrawText(5 * xPage, yBox / 2, "CASH DECLARATION"); // Draw title	
+		
+		local aHelp = ICR_GetLocalUserData("HELP") // Get help settings locally
+		if(aHelp == false) //If help window off
+			{
+				ICR_SelectFont(sFont) // Selecting font
+				ICR_DrawBox(9 * xPage, yPage / 4, wStart / 3, hStart * 0.75, cGrey); // Draw a grey box
+				ICR_DrawText(9 * xPage + wStart  /  6, yPage / 4 + hStart * 0.75 / 2, "HELP") // Draw HELP
+				if(bSelect == 17) // If this box is selected
+							{
+								ICR_DrawFrame(9 * xPage, yPage / 4, wStart / 3, hStart * 0.75, 3, cBlack); // When selected draw 3px black frame
+							}
+						bLocation[17] <- {"LEFT": 9 * xPage, "TOP": yPage / 4, "BOTTOM": yPage / 4 + hStart * 0.75, "RIGHT": 9 * xPage + wStart / 3}; // Save location of box
+			}
+		else // If help window on
+			{
+				ICR_SelectFont(sFont) // Selecting font
+				ICR_DrawBox(9 * xPage, yPage / 4, wStart / 3, hStart * 0.75, cBlack); // Draw a black box
+				ICR_DrawText(9 * xPage + wStart  /  6, yPage / 4 + hStart * 0.75 / 2, "HELP") // Draw HELP
+				if(bSelect == 17) // If this box is selected
+							{
+								ICR_DrawFrame(9 * xPage, yPage / 4, wStart / 3, hStart * 0.75, 3, cGrey); // When selected draw 3px grey frame
+							}
+						bLocation[17] <- {"LEFT": 9 * xPage, "TOP": yPage / 4, "BOTTOM": yPage / 4 + hStart * 0.75, "RIGHT": 9 * xPage + wStart / 3}; // Save location of box
+			}
+			
+		local tFont = ICR_CreateFont("Arial", 22); // Setting font
+		ICR_SelectFont(tFont); // Selecting font
+		ICR_SetText_VAlign(1); // Centre alignment	
+		ICR_SetText_HAlign(1); // Centre alignment	
+
+		local nGap = ICR_GetLocalUserData("GAP") // Set gap size
+		
+		for(local nRows = 1; nRows <= nLines; nRows++) // Count up
+			{	
+				local dName = "VAL"+nRows // Create value names
+				local rValue = ICR_GetLocalUserData(dName) // Get values locally
+				local nValue = format("%0.2f",rValue.tofloat()/100) // Format to 2 decimal places
+				
+				local qName = "QTY"+nRows // Create quantity names
+				local qValue = ICR_GetLocalUserData(qName) // Get quantity locally
+														
+				ICR_SetText_Colour(cBlack); // Set text colour = black
+				ICR_DrawText(xPage, yPage / 2 +  nRows * nGap,cDenom[2 * nRows+ - 1]); // Text for value names
+				ICR_DrawText(2 * xPage, yPage / 2 + nRows * nGap, "x"); // Draw x
+				ICR_DrawText(3 * xPage, yPage / 2 + nRows * nGap , qValue); // Text for quantity names
+				ICR_DrawText(4 * xPage, yPage / 2 + nRows * nGap , "="); // Draw =
+				
+				ICR_SetText_Colour(cWhite); // Set text colour = white
+				ICR_DrawBox(5 * xPage,yPage / 2 + nRows * nGap - hStart / 2, wStart, hStart, cBlack); // Draw a black box
+				ICR_DrawText(5 * xPage + wStart / 2, yPage / 2 + nRows * nGap,"£"+nValue); // Show value in box 
+				
+				if(bSelect == nRows) // If this box is selected
+					{
+						ICR_DrawFrame(5 * xPage, yPage / 2 + nRows * nGap - hStart / 2, wStart, hStart, 3, cRed); // When selected draw 3px red frame
+					}
+				bLocation[nRows] <- {"LEFT": 5 * xPage, "TOP": yPage / 2 + nRows * nGap - hStart / 2, "BOTTOM": yPage / 2 + nRows * nGap + hStart / 2, "RIGHT": 5 * xPage + wStart}; // Save location of box
+				
+				
+				if(rValue > 0)	// If value inputted is more than 0		
+					{
+						ICR_SetText_Colour(cBlack); // Set text colour = black
+						ICR_DrawBox(9 * xPage, yPage / 2 + nRows * nGap - hStart / 2 + 3, wStart / 7, hStart * 0.75, cRed); // Draw a red box
+						ICR_DrawText(9 * xPage + wStart / 14, yPage / 2 + nRows * nGap - hStart / 2 + 3 + hStart * 0.75 / 2,"X");  // Draw X
+				
+						if(bSelect == 20 + nRows) // If this box is selected
+							{
+								ICR_DrawFrame(9 * xPage, yPage / 2 + nRows * nGap + 3, wStart / 7, hStart * 0.75, 3, cBlack); // When selected draw 3px black frame
+							}
+						bLocation[20 + nRows] <- {"LEFT": 9 * xPage, "TOP": yPage / 2 + nRows * nGap, "BOTTOM": yPage / 2 + nRows * nGap + hStart, "RIGHT": 9 * xPage + wStart}; // Save location of box				
+					}
+					
+			} 	
+			
+		fTotal.clear() // Clear array
+		for(local nTotal = 1; nTotal <= nLines; nTotal++) // Count up
+			{
+				local dName = "VAL"+nTotal // Create value name
+				local nValue = ICR_GetLocalUserData(dName) // Get value locally
+				fTotal.push(nValue) // Push value to array
+			}
+						
+		foreach(idx,val in fTotal) // For each value
+			{
+			print("index "+idx+" has value "+val) // Print value
+			}
+			
+		local rTotal = 0 // Set total to 0
+		for(local nCount = 0; nCount < fTotal.len() ; nCount++) // Count up
+			{
+				rTotal += fTotal[nCount] // Keep adding values in array
+			}	
+		
+		local tValue = format("%0.2f",rTotal.tofloat()/100) // Format value to 2 decimal places
+		ICR_SetLocalUserData("TOTAL",tValue) // Saving total
+
+		ICR_SelectFont(bFont) // Selecting font
+		ICR_SetText_Colour(cBlack); // Set text colour = black
+		ICR_DrawText(5 * xPage + wStart / 2, yPage / 2 + (nLines + 0.5) * nGap + hStart / 2, "£" + tValue); // Show total value in box
+		
+		ICR_DrawBox(3 * xPage,  yPage / 2 + (nLines + 1.5) * nGap, wStart * 0.75, hStart, cGreen); // Draw a green box
+		ICR_DrawText(3 * xPage + wStart * 0.75 /  2,  yPage / 2 + (nLines + 1.5) * nGap + hStart / 2, "CONFIRM") // Draw CONFIRM
+		if(bSelect == 15) // If this box is selected
+					{
+						ICR_DrawFrame(3 * xPage, yPage / 2 + (nLines + 1.5) * nGap, wStart * 0.75, hStart, 3, cBlack); // When selected draw 3px black frame
+					}
+				bLocation[15] <- {"LEFT": 3 * xPage, "TOP": yPage / 2 + (nLines + 1.5) * nGap, "BOTTOM": yPage / 2 + (nLines + 1.5) * nGap + hStart, "RIGHT": 3 * xPage + wStart * 0.75}; // Save location of box
+
+		ICR_SelectFont(bFont) // Selecting font		
+		ICR_DrawBox(8 * xPage, yPage / 2 + (nLines + 1.5) * nGap, wStart * 0.6, hStart, cRed); // Draw a red box
+		ICR_DrawText(8 * xPage + wStart * 0.3, yPage / 2 + (nLines + 1.5) * nGap + hStart / 2, "CANCEL") // Draw CANCEL
+		if(bSelect == 19) // If this box is selected
+					{
+						ICR_DrawFrame(8 * xPage, yPage / 2 + (nLines + 1.5) * nGap, wStart * 0.6, hStart, 3, cBlack); // When selected draw 3px black frame
+					}
+				bLocation[19] <- {"LEFT": 8 * xPage, "TOP": yPage / 2 + (nLines + 1.5) * nGap, "BOTTOM": yPage / 2 + (nLines + 1.5) * nGap + hStart, "RIGHT": 8* xPage + wStart * 0.6}; // Save location of box
+	}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function PaintDecHelp() // Painting Help Window
+	{	
+		local bFont = ICR_CreateFont("Arial", 22, true,false,true); // Setting font
+		ICR_SelectFont(bFont) // Selecting font
+		ICR_SetText_Colour(cBlack); // Set text colour = black
+		ICR_SetText_VAlign(1); // Centre alignment
+		ICR_SetText_HAlign(1); // Centre alignment	
+	
+		local tFont = ICR_CreateFont("Arial", 22); // Setting font
+		ICR_SelectFont(tFont); // Selecting font
+		ICR_SetText_VAlign(1); // Centre alignment
+		ICR_SetText_HAlign(1); // Centre alignment	
+		ICR_SetText_Colour(cBlack); // Colour = black
+		
+		ICR_DrawText(xPage, yPage / 2, "Click on"); // Draw words
+		ICR_DrawText(5.4 * xPage, yPage / 2, "to enter value"); // Draw words
+		
+		ICR_DrawText(xPage, 3 * yPage / 2, "Click on"); // Draw words
+		ICR_DrawText(4.25 * xPage, 3 * yPage / 2, "to cancel value"); // Draw words
+		
+		ICR_DrawText(xPage, 5 * yPage / 2, "Click on"); // Draw words
+		ICR_DrawText(7 * xPage, 5 * yPage / 2, "to cancel cash decloration"); // Draw words
+		
+		ICR_DrawText(xPage, 7 * yPage / 2, "Click on"); // Draw words
+		ICR_DrawText(7.5 * xPage, 7 * yPage / 2, "to finalise cash decloration"); // Draw words
+		
+		ICR_DrawBox(2 * xPage, 2.5 * yPage / 2, wStart / 7, hStart * 0.75, cRed); // Draw a red box
+		ICR_DrawText(2 * xPage + wStart / 14, 2.5 * yPage / 2 + hStart * 0.75 / 2,"X");  // Draw X		
+		
+		ICR_SelectFont(bFont) // Selecting font
+		ICR_DrawBox(2 * xPage, 4.25 * yPage / 2, wStart * 0.6, hStart, cRed); // Draw a red box
+		ICR_DrawText(2 * xPage + wStart * 0.3, 4.25 * yPage / 2 + hStart / 2, "CANCEL") // Draw CANCEL
+
+		ICR_DrawBox(2 * xPage, 6.25 * yPage / 2 , wStart * 0.75, hStart, cGreen); // Draw a green box
+		ICR_DrawText(2 * xPage + wStart * 0.75 /  2, 6.25 * yPage / 2 + hStart / 2, "CONFIRM") // Draw CONFIRM
+
+		ICR_SelectFont(tFont); // Selecting font
+		ICR_SetText_Colour(cWhite); //// Set text colour = white
+		ICR_DrawBox(2 * xPage, yPage / 6, wStart / 2, hStart, cBlack); // Draw a black box
+		ICR_DrawText(2 * xPage + wStart / 4, yPage / 8 + hStart / 2,"£0.00"); // Show value in box 
+						
+	}
+		
+/*-------------------------------------------------------------------------------------------------------*/
+
+function OnWindowPaint(nID) 
+	{
+		if(nID == nWindowID) // If window ID matches float decloration window
+		  {
+			PaintWindow(); // Run float decloration window
+		  }
+		if(nID == tWindowID) // If window ID matches help window
+		  {
+			PaintHelp(); // Run help window
+		  }
+		if(nID == cWindowID) // If window ID matches help window
+		  {
+			PaintDecWindow(); // Run cash dec window
+		  }
+		if(nID == dWindowID) // If window ID matches help window
+		  {
+			PaintDecHelp(); // Run cash dec help window
+		  }
+	}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function AfterModeChange(nFrom, nTo) // If changing mode
+	{
+		ICR_SetLocalUserData("bDebugPrinting", bDebugPrinting); // Saving our bDebugPrinting variable to our local.userdata.
+		
+		ICR_Window_Enable (nWindowID,false) // Close window
+		ICR_Window_Enable (tWindowID,false) // Close window
+		ICR_Window_Enable (cWindowID,false) // Close window
+		ICR_Window_Enable (dWindowID,false) // Close window
+		ICR_SetLocalUserData("WINDOW",0); // Turn window off
+
+	}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function DetectKeyPressed(nX, nY)
+{
+	// Checking through our bLocation table.
+	/* format:
+	   {[0] = {LEFT = 0, TOP = 0, RIGHT = 0, BOTTOM = 0},
+	    [1] = {LEFT = 0, TOP = 0, RIGHT = 0, BOTTOM = 0}}
+	*/
+	// Using the foreach loop we go through our 2 level table.
+	// In this case:
+	// idx = the slot number
+	// val = the value table attached to the slot.
+	// By calling val.LEFT we can get the LEFT value of the current idx.
+	// this will go through the entire loop until it finds a match.
+	// When it finds a match, it assigns the value to a global variable (bSelect), then breaks out.
+	// If no match is found, it leaves bSelect as 0, indicating that no boxes have been selected.
+	foreach(idx, val in bLocation)
+	{
+		// Checking the coordinates are within the constraints of a "box".
+		if((nX >= val.LEFT && nX <= val.RIGHT) && (nY >= val.TOP && nY <= val.BOTTOM))
+		{
+			// This "box" index matches, assign the current index to bSelect.
+			bSelect = idx;
+			// We're done here, break out of the loop.
+			// Do not continue with the remaining values.
+			break;
+		}
+		// No match has been found on this iteration, assigning 0 to bSelect.
+		// If no match is found once the loop ends, it will leave with 0 as it's value.
+		else bSelect = 0;
+	}
+}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function OnMouseEvent(nWindowID, nEvent, nX, nY)
+	{
+		local nWindow = ICR_GetLocalUserData("WINDOW"); // Get window to enable 
+		if(nWindow == 1) // If float window
+			{
+				switch(nEvent) // Options for what happens
+					{				
+						case EVENT.DOWN: // Mouse pressed down
+										break; //stop
+						case EVENT.UP: // Mouse released
+										DetectKeyPressed(nX, nY); // Track mouse location
+										switch(bSelect)
+											{
+												case 0: // Nothing selected
+														break; // Stop
+												case bSelect: // Something selected
+														print("I have pressed box number "+bSelect)
+														if(bSelect >= 1 && bSelect <= 12) // For all value entries
+															{
+																local nValue = ICR_GetNumberDialog("Enter value in pence", 0) // Pop up numberpad																																
+																local dName = "VAL"+bSelect // Create value name
+																local qValue = nValue.tointeger() / nDenom[2 * bSelect].tointeger() // Set value as whole number
+																local qName = "QTY"+bSelect // Create quantity name
+																local nTest = nDenom[2 * bSelect].tointeger() * qValue
+																	if(nTest == nValue)
+																		{
+																			ICR_SetLocalUserData(dName,nValue) // Save value locally
+																			ICR_SetLocalUserData(qName,qValue) // Save quantity locally
+																		}
+																			else
+																		{
+																			ICR_Sound(2)// Error Noise
+																			ICR_MessageBox("This amount is incorrect","Please enter correct value","Error",0) // Message explaining error
+																			return false; // Do not proceed
+																		}
+															}		
+														if(bSelect == 15) // If CONFIRM selected
+															{
+																local tValue = ICR_GetLocalUserData("TOTAL") // Getting total
+																local nResult = ICR_MessageBox("You are declaring £" + tValue + " in your float","Is this correct?","Float",1) // Message confirming amount
+																if(nResult == 1)// If yes
+																	{
+																				local tKey = ICR_GetLocalUserData("TRNKEY") // Get transaction key record number locally
+																				ICR_SetInput(tValue) // Enter value in input
+																				ICR_KeyPress(52,tKey) // Press Float Dec transaction key
+																				ICR_Window_Enable (nWindowID,false) // Close window
+																				ICR_Window_Enable (tWindowID,false) // Close window		
+																				ICR_SetLocalUserData("WINDOW",0); // Turn off windows																			
+																				ICR_RedrawScreen(); // Redraw window
+																				ICR_SetLocalUserData("FLOATPRINT",false) // Set print float decloration to off
+																	}
+															}
+														if(bSelect == 17) // If HELP selected
+															{
+																local aHelp = ICR_GetLocalUserData("HELP") // Get help settings locally
+																if(aHelp == true)
+																	{
+																		ICR_SetLocalUserData("HELP",false); // Turn help off
+																		ICR_Window_Enable (tWindowID,false) // Close window
+																		ICR_RedrawScreen(); // Redraw window
+																	}
+																else	
+																	{				
+																		ICR_SetLocalUserData("HELP",true); // Turn help on
+																		ICR_Window_Enable (tWindowID,true) // Open window
+																		ICR_RedrawScreen(); // Redraw window
+																	}
+															}															
+														if(bSelect == 19) // If CANCEL selected
+															{
+																local nResult = ICR_MessageBox("Are you sure you","wish to cancel?","X",1) // Message confirming cancelling
+																if(nResult == 1)// If yes
+																	{
+																		ICR_Window_Enable (nWindowID,false) // Close window
+																		ICR_Window_Enable (tWindowID,false) // Close window
+																		ICR_SetLocalUserData("WINDOW",0); // Turn off windows
+																		ICR_RedrawScreen(); // Redraw window
+																		ICR_SetLocalUserData("FLOATPRINT",false) // Set print float decloration to off
+																	}
+															}
+														if(bSelect > 20) // If small cancel selected
+															{
+																local vNumber = bSelect - 20 // Create value
+																local vName = "VAL" + vNumber // Create value name
+																ICR_SetLocalUserData(vName,0) // Set to 0
+																local qName = "QTY" + vNumber // Create quantity name
+																ICR_SetLocalUserData(qName,0) // Set to 0
+															}
+												default: // If anything else
+														break; // Stop
+											}
+										ICR_RedrawScreen(); // Redraw window
+										break; // Stop
+						case EVENT.MOVE:
+										break; // Stop
+					}
+			}
+		if(nWindow == 2) // If cash dec window
+			{
+				switch(nEvent) // Options for what happens
+					{
+						case EVENT.DOWN: // Mouse pressed down
+										break; //stop
+						case EVENT.UP: // Mouse released
+										DetectKeyPressed(nX, nY); // Track mouse location
+										switch(bSelect)
+											{
+												case 0: // Nothing selected
+														break; // Stop
+												case bSelect: // Something selected
+														print("I have pressed box number "+bSelect)
+														if(bSelect >= 1 && bSelect <= 12) // For all value entries
+															{
+																local nValue = ICR_GetNumberDialog("Enter value in pence", 0) // Pop up numberpad																																
+																local dName = "VAL"+bSelect // Create value name
+																local qValue = nValue.tointeger() / cDenom[2 * bSelect].tointeger() // Set value as whole number
+																local qName = "QTY"+bSelect // Create quantity name
+																local nTest = cDenom[2 * bSelect].tointeger() * qValue
+																	if(nTest == nValue)
+																		{
+																			ICR_SetLocalUserData(dName,nValue) // Save value locally
+																			ICR_SetLocalUserData(qName,qValue) // Save quantity locally
+																		}
+																			else
+																		{
+																			ICR_Sound(2)// Error Noise
+																			ICR_MessageBox("This amount is incorrect","Please enter correct value","Error",0) // Message explaining error
+																			return false; // Do not proceed
+																		}
+															}		
+														if(bSelect == 15) // If CONFIRM selected
+															{
+																local tValue = ICR_GetLocalUserData("TOTAL") // Getting total
+																local nResult = ICR_MessageBox("You are declaring £" + tValue + " in cash","Is this correct?","Cash Dec",1) // Message confirming amount
+																if(nResult == 1)// If yes
+																	{																		
+																		for(local nCount = 1; nCount <= 12; nCount++) //count denominations
+																			{
+																				local qName = "QTY"+nCount //create name for QTY
+																				local cName = "cDEC"+nCount //create name for dec figures
+																				local nQTY = ICR_GetLocalUserData(qName) //get QTY figures
+																				local sKey = ICR_GetLocalUserData(cName) //get sts key records
+																				
+																				if(nQTY != 0)
+																					{																				
+																						ICR_SetInput(nQTY) //set qty amount
+																						ICR_KeyPress(53,sKey) //press sts key
+																					}
+																			}
+																																					
+																		ICR_Window_Enable (cWindowID,false) // Close window
+																		ICR_Window_Enable (dWindowID,false) // Close window
+																		ICR_SetLocalUserData("WINDOW",0); // Turn off windows
+																		ICR_RedrawScreen(); // Redraw window
+																		
+																		ICR_KeyPress(53, 211) //press report button
+																	}
+															}
+														if(bSelect == 17) // If HELP selected
+															{
+																local aHelp = ICR_GetLocalUserData("HELP") // Get help settings locally
+																if(aHelp == true)
+																	{
+																		ICR_SetLocalUserData("HELP",false); // Turn help off
+																		ICR_Window_Enable (dWindowID,false) // Close window
+																		ICR_RedrawScreen(); // Redraw window
+																	}
+																else	
+																	{				
+																		ICR_SetLocalUserData("HELP",true); // Turn help on
+																		ICR_Window_Enable (dWindowID,true) // Open window
+																		ICR_RedrawScreen(); // Redraw window
+																	}
+															}															
+														if(bSelect == 19) // If CANCEL selected
+															{
+																local nResult = ICR_MessageBox("Are you sure you","wish to cancel?","X",1) // Message confirming cancelling
+																if(nResult == 1)// If yes
+																	{
+																		ICR_Window_Enable (cWindowID,false) // Close window
+																		ICR_Window_Enable (dWindowID,false) // Close window
+																		ICR_SetLocalUserData("WINDOW",0); // Turn off windows
+																		ICR_RedrawScreen(); // Redraw window
+																		ICR_SetLocalUserData("FLOATPRINT",false) // Set print float decloration to off
+																	}
+															}
+														if(bSelect > 20) // If small cancel selected
+															{
+																local vNumber = bSelect - 20 // Create value
+																local vName = "VAL" + vNumber // Create value name
+																ICR_SetLocalUserData(vName,0) // Set to 0
+																local qName = "QTY" + vNumber // Create quantity name
+																ICR_SetLocalUserData(qName,0) // Set to 0
+															}
+												default: // If anything else
+														break; // Stop
+											}
+										ICR_RedrawScreen(); // Redraw window
+										break; // Stop
+						case EVENT.MOVE:
+										break; // Stop
+					}
+			}
+	}
+	
+/*-------------------------------------------------------------------------------------------------------*/
+	
+function OnEnterPGMMenu(nSub) // When entering PGM 3
+	{
+		ICR_PurgeProgramSettings(); // Clear settings and repull data
+		switch(nSub)
+			{
+				case 0: // System settings
+					ICR_AdvertiseProgramSetting("Script Details", "SCRIPTVERINF"); // Show script info
+					ICR_AdvertiseProgramSetting("Enable Cash Decloration","CASHDEC"); // Enable Float Decloration sub menu
+					local sKey = ICR_AdvertiseProgramSetting("Status key number required on keyboard", "STSKEY");
+					ICR_ProgramItem_SetReadOnly(sKey); // Show status key record number as read only
+					ICR_AdvertiseProgramSubMenu("Enable Float Decloration",1); // Enable Float Decloration sub menu
+					local dSettings = ICR_GetLocalUserData("FLOATDEC") // Get float decloration setting (Full or Denom)
+					if(dSettings == 2)
+						{
+							ICR_AdvertiseProgramSubMenu("Float Denominations",2); // Enable Float Denominations sub menu
+						}
+					break;
+				case 1: // Submenu 2 (Float Decloration Settings)
+					ICR_AdvertiseProgramHeading("Float Decloration Settings"); // Heading
+					local nID = ICR_AdvertiseProgramSetting("Float Decloration Method", "FLOATDEC") // Show float decloration setting
+					ICR_ProgramItem_SetOptionList(nID,1) // Show options for float decloration
+					ICR_AdvertiseProgramSetting("Print signature strip?", "SIGSTRIP");  // Print signature strip on/ off
+					ICR_AdvertiseProgramSetting("Managers only?", "MANAGERS");  // Managers only on/ off
+					break; //stop
+				case 2: // Submenu 3 (Float Denominations)
+					ICR_AdvertiseProgramHeading("Enable Denominations"); // Heading
+					ICR_AdvertiseProgramSetting("Enable £50", "ENFIFTY");  // Enable/Disable £50
+					ICR_AdvertiseProgramSetting("Enable £20", "ENTWENTY");  // Enable/Disable £20
+					ICR_AdvertiseProgramSetting("Enable £10", "ENTEN");  // Enable/Disable £10
+					ICR_AdvertiseProgramSetting("Enable £5", "ENFIVE");  // Enable/Disable £5
+					ICR_AdvertiseProgramSetting("Enable £2", "ENTWO");  // Enable/Disable £2
+					ICR_AdvertiseProgramSetting("Enable £1", "ENONE");  // Enable/Disable £1
+					ICR_AdvertiseProgramSetting("Enable 50p", "ENFIFTYP");  // Enable/Disable 50p
+					ICR_AdvertiseProgramSetting("Enable 20p", "ENTWENTYP");  // Enable/Disable 20p
+					ICR_AdvertiseProgramSetting("Enable 10p", "ENTENP"); // Enable/Disable 10p
+					ICR_AdvertiseProgramSetting("Enable 5p", "ENFIVEP");  // Enable/Disable 5p
+					ICR_AdvertiseProgramSetting("Enable 2p", "ENTWOP");  // Enable/Disable 2p
+					ICR_AdvertiseProgramSetting("Enable 1p", "ENONEP");  // Enable/Disable 1p
+					break; // Stop
+				default: 
+					ICR_AdvertiseProgramHeading("This menu doesn't exist"); // If they break my menus
+					break; // Stop
+			}
+	}
+	
+/*-------------------------------------------------------------------------------------------------------*/
+	
+function OnEnterPGMOptionList(nID)
+	{
+		ICR_PurgeProgramOptionList(); // Purge settings
+		switch(nID) 
+			{
+				case 1: // If list 1
+					ICR_ProgramOptionList_Add("TOTAL VALUE",1) // Option 1
+					ICR_ProgramOptionList_Add("DENOMINATIONS",2) // Option 2
+					ICR_ProgramOptionList_Add("OFF",3) // Option 3
+					break; // Stop
+				default:
+					break; // Stop
+			}
+	}
+/*-------------------------------------------------------------------------------------------------------*/
+	
+function PreSaleFinalised()
+	{
+		local tFloatDec = ICR_GetLocalUserData("FLOATDEC"); // Get float decloration setting (Full or Denom)
+		local pFloat = ICR_GetLocalUserData("FLOATPRINT") // Get float print setting
+		local sStrip = ICR_GetLocalUserData("SIGSTRIP") // Get float decloration setting
+		
+		if (pFloat == true)// If float denomination print is on
+			{		
+				switch(tFloatDec)
+					{
+						case 1:
+								break;
+						case 2:
+								ICR_ReceiptLine("", 0, 0, 0, 100, 0); // Print top blank line #2
+								ICR_JournalLine("", 0, 0, 0, 100, 0); // Print top blank line #2
+								
+								local nLines = (nDenom.len() - 1) / 2// work out total enabled values
+								for(local nCount = 1; nCount <= nLines; nCount++)
+									{
+										local qName = "QTY"+nCount // Create quantity names
+										local qValue = ICR_GetLocalUserData(qName) // Get quantity locally
+										
+										local dValue = format("%0.2f",fTotal[nCount-1].tofloat()/100)
+										
+										local rLine = (nDenom[2 * nCount - 1] + "	x	" + qValue + "	=	£" + dValue + ""); // Create text for receipt
+										ICR_ReceiptLine ("" + rLine + "", 0, 0, 0, 100, 0); // Print line
+										ICR_JournalLine ("" + rLine + "", 0, 0, 0, 100, 0); // Print line				
+									}
+									
+									local nInput = ICR_GetLocalUserData("TOTAL") // Getting total
+								
+									ICR_ReceiptLine  ("", 0, 0, 0, 100, 0); // Print bottom blank line #1
+									ICR_JournalLine  ("", 0, 0, 0, 100, 0); // Print bottom blank line #1
+									ICR_ReceiptLine  ("Total				£"+nInput+"", 0, 0, 0, 100, 0); // Print total line
+									ICR_JournalLine  ("Total				£"+nInput+"", 0, 0, 0, 100, 0); // Print total line	
+									break;
+					}
+				if(sStrip == true)
+					{
+						ICR_ReceiptLine  ("", 0, 0, 0, 100, 0); // Print bottom blank line #2
+						ICR_JournalLine  ("", 0, 0, 0, 100, 0); // Print bottom blank line #2
+						ICR_ReceiptLine  ("", 0, 0, 0, 100, 0); // Print bottom blank line #3
+						ICR_JournalLine  ("", 0, 0, 0, 100, 0); // Print bottom blank line #3
+						ICR_ReceiptLine ("Signed _____________________________________", 0, 0, 0, 100, 0); // Print Signature Line
+						ICR_JournalLine ("Signed _____________________________________", 0, 0, 0, 100, 0); // Print Signature Line
+						ICR_ReceiptLine  ("", 0, 0, 0, 100, 0); // Print bottom blank line #4
+						ICR_JournalLine  ("", 0, 0, 0, 100, 0); // Print bottom blank line #4
+						ICR_ReceiptLine  ("", 0, 0, 0, 100, 0); // Print bottom blank line #5
+						ICR_JournalLine  ("", 0, 0, 0, 100, 0); // Print bottom blank line #5
+					}
+			}
+	}

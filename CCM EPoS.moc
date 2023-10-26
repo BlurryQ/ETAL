@@ -1,0 +1,71 @@
+local bDebugPrinting = false;	//  debug printing is a yes :)
+/*-------------------------------------------------------------------------------------------------------------------------------------------*/
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+
+ICR_AdvertiseProgramHeading("Customer Overdraft Warning"); //Enable script heading
+ICR_SetLocalUserData("OVERDRAFT",true,true); //Disable script
+ICR_AdvertiseProgramSetting("Enable Customer Overdraft Warning?", "OVERDRAFT");  //Enable in PGM 3
+}
+/*-------------------------------------------------------------------------------------------------------------------------------------------*/
+//NO OVERDRAFT CUSTOMERS
+/*-------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function BeforeKeyPress(nFile,nRecord,nKeyType)
+{
+	local nEnable = ICR_GetLocalUserData("OVERDRAFT")
+	if(nEnable == true)
+		{
+			switch(nKeyType)
+				{
+					case 4: //if account
+								local nBuff = ICR_GetClerkBuffer_Index()//check buffer
+								local nCust = nBuff.CUSTOMER;//get customer number
+								print("customer num -----> " + nCust);//print customer number
+								local nBalFile = ICR_GetPGMData(261, nBuff.CUSTOMER); //Get customer table
+								local nCustBal = (nBalFile.BALANCE); //Get customer balance
+								local nBalance = format("%0.2f",nCustBal.tofloat()/100)
+								print("Balance -----> £" + nBalance);//print customer balance
+								if(nCust != 0)//if  customer in sale
+									{						
+										local nResult = ICR_MessageBox("Customer has £" + nBalance + "  left.", "Do you wish to process this?", "WARNING",1); //If no overdraft
+										if (nResult == 1)
+											{
+												return true;
+											}
+										else
+											{
+												return false;
+											}
+									}
+								return true;
+					case 29: //if exchange points
+								local nBuff = ICR_GetClerkBuffer_Index()//check buffer
+								local nCust = nBuff.CUSTOMER;//get customer number
+								print("customer num -----> " + nCust);//print customer number
+								local nBalFile = ICR_GetPGMData(261, nBuff.CUSTOMER); //Get customer table
+								local nCustPoints = (nBalFile.POINTS); //Get customer balance
+								print("Points -----> " + nCustPoints);//print customer balance
+								if(nCust != 0)//if  customer in sale
+									{						
+										local nResult = ICR_MessageBox("Customer has " + nCustPoints + " points left.", "Do you wish to process this?", "WARNING",1); //If no overdraft
+										if (nResult == 1)
+											{
+												return true;
+											}
+										else
+											{
+												return false;
+											}
+									}
+								return true;
+					default: //otherwise	
+								break;
+								return true;
+				}
+		}
+}

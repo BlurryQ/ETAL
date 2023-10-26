@@ -1,0 +1,312 @@
+local bDebugPrinting = false;	//  debug printing is a yes :)
+/*-------------------------------------------------------------------------------------------------------------------------------------------
+All you need to do to use this script is:
+CREATE DEPOSIT KEY
+ENTER SETTING IN PGM 3 ETAL
+TEST
+
+THIS WILL NOT WORK WITH MIX AND MATCH OR PRICE LEVELS
+-------------------------------------------------------------------------------------------------------------------------------------------*/
+
+local nDisc = 0.50 // set discount to 50%
+local dLimit = 1000 //set limit to £10
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------*/
+local aRay = []
+
+local rValue = []
+dofile("etal\\lib\\keys.moc"); // Load Keys from lib (auto crate key)
+
+function OnInit()
+{
+ICR_SetLocalUserData("SWITCH",1) //switch for date
+ICR_SetLocalUserData("SUB",false) //switch for items not in offer
+
+ICR_SetLocalUserData("ITEMISER",0,true)
+ICR_SetLocalUserData("DEPOSIT",0,true)
+
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+ICR_SetLocalUserData("BILL",0)
+
+local sCover = CheckForKey( { NAME = "COVERS" , MATCHNAME = true, FILE = 53, KEYTYPE = 97, MATCHNAME = true} ); //Create STS key
+print("Covers STS key is record "+sCover)
+ICR_SetLocalUserData("COVERS",sCover)
+local sSub = CheckForKey( { NAME = "SUB TOTAL" , MATCHNAME = true, FILE = 53, KEYTYPE = 6, MATCHNAME = true} ); //Create STS key
+print("Sub Total STS key is record "+sSub)
+ICR_SetLocalUserData("SUBTOTAL",sSub)
+}
+
+/*------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function BeforeKeyPress(nFile, nRecord, nKeytype)
+	{
+		local sSub = ICR_GetLocalUserData("SUBTOTAL") //get subtotal record number
+		if(nFile == 53 && nRecord == sSub) //if subtotal
+			{
+				local nDate = date() //get date
+				local nYear = nDate.year //get year
+				if(nYear == 2020) //if 2020
+					{
+						local nMonth = nDate.month //get month
+						if(nMonth == 9) //if september
+							{
+								local nDay = nDate.wday //get day
+								if(nDay == 1 || nDay == 2 || nDay == 3) //if Monday - Wednesday
+									{
+										rValue.clear() //clear array
+										local cBuff = ICR_GetClerkBuffer_Index(); //get sales info										
+										local nItem = ICR_GetLocalUserData("ITEMISER") //get the itemiser we care about
+										local tKey = ICR_GetLocalUserData("DEPOSIT") //get the deposit record number
+									
+										for(local nCount = 1; nCount <= cBuff.REGPOS; nCount++) //get the buffer size
+											{   
+												local tPLU = ICR_GetClerkBuffer_Item(nCount); // go through each item
+									
+												if(tPLU.FILE == 1) // if it's a PLU
+													{
+														switch(nItem) 
+															{
+																case 0: 
+																		break; //if no itemiser set
+																case 1:	// if itemiser 1
+																		local aPLU = ICR_GetPGMData(tPLU.FILE, tPLU.RECORD);
+																		if((aPLU.FLAG1 & 0x08) == 8) //if itemiser 1
+																			{
+																				print("I am PLU " + tPLU.RECORD + ", costing £" + aPLU.PRICE1L1 + " and am itemiser " + nItem)
+																				local qPLU = tPLU.QUANTITY / 100
+																				print("I have " + qPLU + " in this sale")
+																				local tValue = qPLU * aPLU.PRICE1L1
+																				print("I am adding " + tValue + " for this entry")
+																				rValue.push(tValue) //add price to array
+																				ICR_SetLocalUserData("SUB",true)// turn on switch for itemiser products
+																			}
+																		break;//stop
+																case 2:	// if itemiser 2
+																		local aPLU = ICR_GetPGMData(tPLU.FILE, tPLU.RECORD);
+																		if((aPLU.FLAG1 & 0x10) == 16) //if itemiser 2
+																			{
+																				print("I am PLU " + tPLU.RECORD + ", costing £" + aPLU.PRICE1L1 + " and am itemiser " + nItem)
+																				local qPLU = tPLU.QUANTITY / 100
+																				print("I have " + qPLU + " in this sale")
+																				local tValue = qPLU * aPLU.PRICE1L1
+																				print("I am adding " + tValue + " for this entry")
+																				rValue.push(tValue) //add price to array
+																				ICR_SetLocalUserData("SUB",true)// turn on switch for itemiser products
+																			}
+																		break;//stop
+																case 3:	// if itemiser 3
+																		local aPLU = ICR_GetPGMData(tPLU.FILE, tPLU.RECORD);
+																		if((aPLU.FLAG1 & 0x20) == 32) //if itemiser 3
+																			{
+																				print("I am PLU " + tPLU.RECORD + ", costing £" + aPLU.PRICE1L1 + " and am itemiser " + nItem)
+																				local qPLU = tPLU.QUANTITY / 100
+																				print("I have " + qPLU + " in this sale")
+																				local tValue = qPLU * aPLU.PRICE1L1
+																				print("I am adding " + tValue + " for this entry")
+																				rValue.push(tValue) //add price to array
+																				ICR_SetLocalUserData("SUB",true)// turn on switch for itemiser products
+																			}
+																		break;//stop
+																case 4:	// if itemiser 4
+																		local aPLU = ICR_GetPGMData(tPLU.FILE, tPLU.RECORD);
+																		if((aPLU.FLAG1 & 0x40) == 64) //if itemiser 4
+																			{
+																				print("I am PLU " + tPLU.RECORD + ", costing £" + aPLU.PRICE1L1 + " and am itemiser " + nItem)
+																				local qPLU = tPLU.QUANTITY / 100
+																				print("I have " + qPLU + " in this sale")
+																				local tValue = qPLU * aPLU.PRICE1L1
+																				print("I am adding " + tValue + " for this entry")
+																				rValue.push(tValue) //add price to array
+																				ICR_SetLocalUserData("SUB",true)// turn on switch for itemiser products
+																			}
+																		break;//stop
+																case 5:	// if itemiser 5
+																		local aPLU = ICR_GetPGMData(tPLU.FILE, tPLU.RECORD);
+																		if((aPLU.FLAG1 & 0x80) == 128) //if itemiser 5
+																			{
+																				print("I am PLU " + tPLU.RECORD + ", costing £" + aPLU.PRICE1L1 + " and am itemiser " + nItem)
+																				local qPLU = tPLU.QUANTITY / 100
+																				print("I have " + qPLU + " in this sale")
+																				local tValue = qPLU * aPLU.PRICE1L1
+																				print("I am adding " + tValue + " for this entry")
+																				rValue.push(tValue) //add price to array
+																				ICR_SetLocalUserData("SUB",true)// turn on switch for itemiser products
+																			}
+																		break;//stop
+															}
+													}
+												if(tPLU.FILE == 52 && tPLU.RECORD == tKey) //If our deposit key
+													{
+														ICR_Sound(2)// Error Noise
+														ICR_MessageBox("The September scheme is already in this sale","This discount can no longer be applied","ERROR",0) //error message
+														return false; //stop
+													}
+											}
+										local rTotal = 0 //set value to 0
+										for(local nCount = 0; nCount < rValue.len() ; nCount++) // Count up
+											{
+												rTotal += rValue[nCount] // Keep adding values in array
+											}
+										print("Total Itemiser value = " + rTotal)
+										ICR_SetLocalUserData("BILL",rTotal) //set total value
+										local tSub = ICR_GetLocalUserData("SUB") //get itemiser switch
+										
+										local sCover = ICR_GetLocalUserData("COVERS") //get covers STS record number
+										local nCovers = (cBuff.COVERS);//Get cover info
+										if(nCovers == 0 && tSub == true) //if we have a value
+											{
+												local nCovers = ICR_KeyPress(53,sCover) //press covers
+											}
+									}
+							}
+						ICR_SetLocalUserData("SWITCH",1) //turn on AfterKeyPress
+					}
+			}
+		else
+			{
+				ICR_SetLocalUserData("SWITCH",0) //turn off switch
+				ICR_SetLocalUserData("SUB",false)//turn off switch
+				return true;
+			}
+	}
+	
+/*------------------------------------------------------------------------------------------------------------------------------------------*/	
+function AfterKeyPress(nFile, nRecord, nKeytype)
+
+	{
+		local sSub = ICR_GetLocalUserData("SUBTOTAL") //get sub total STS record number
+		if(nFile == 53 && nRecord == sSub) //if subtotal
+			{
+				local nEnable = ICR_GetLocalUserData("SWITCH") //get switch value
+				local tSub = ICR_GetLocalUserData("SUB") //get another switch value
+				if(nEnable == 1 && tSub == true) //if both switches are good
+					{
+						local cBuff = ICR_GetClerkBuffer_Index(); //get sale info
+						local nCovers = (cBuff.COVERS);//Get cover info
+						local rTotal = ICR_GetLocalUserData("BILL") //get bill total
+						
+						local nCovers = (cBuff.COVERS);//Get cover info
+						print("I have " + nCovers + " Customers")
+						local tDisc = rTotal * nDisc //get discount value
+						print("25% total is " + tDisc)
+						print("Each customer gets " + tDisc / nCovers)
+						local nLimit = nCovers * dLimit //get limit value
+						print("LIMIT = " + nLimit + " // DISC = " + tDisc)
+						
+						local tKey = ICR_GetLocalUserData("DEPOSIT") //get the deposit record number
+						
+						if(tDisc >= nLimit) //if dicount is bigger than limit
+							{
+								print("LIMIT - Discount set to " + nLimit)
+								local nDisplay = format("%0.2f",nLimit.tofloat()/100)
+								local dConf = ICR_MessageBox("You are processing a discount","totalling £" + nDisplay + "","Confirm",1) //confirm totalling
+								switch(dConf)
+									{
+										case 0: return false
+												break;
+										case 1: 	
+										ICR_SetInput(nLimit)//enter limit value
+										ICR_KeyPress(52,tKey)//press deposit
+										break;
+									}
+							}
+						else //if discount is less than limit
+							{
+								print("TDISC - Discount set to " + tDisc)	
+								local nDisplay = format("%0.2f",tDisc.tofloat()/100)
+								local dConf = ICR_MessageBox("You are processing a discount","totalling £" + nDisplay + "","Confirm",1) //confirm totalling
+								switch(dConf)
+									{
+										case 0: return false
+												break;
+										case 1: 
+										ICR_SetInput(tDisc/100) //enter discount value
+										ICR_KeyPress(52,tKey)//press deposit
+										break;
+									}
+							}
+					}
+			}
+		else
+			{
+				return true;
+			}
+	}
+
+/*------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function OnEnterPGMMenu(nSub) // When entering PGM 3
+	{
+		ICR_PurgeProgramSettings(); // Clear settings and repull data
+				aRay.clear() //Clear array of data
+				
+				local nPGM = ICR_GetPGMData(399,52); //Get PGM Data
+				local tMax = nPGM.SIZE //Get TRN Maximim file size
+				print("Transaction key file size is "+tMax)
+				
+				aRay.push(0) //add 0 to array
+				
+				for(local nCount = 1; nCount <= tMax; nCount++)
+					{
+						local tPGM = ICR_GetPGMData(52,nCount); //Get PGM Data
+						local tKey = tPGM.KEYTYPE //get keytype
+						local tName = tPGM.NAME //get name
+											
+						if(tKey == 22) //if discount key
+							{
+								print (tName+" is record number "+nCount+" has keytype number " +tKey)
+								aRay.push(tName) //add name to array
+								aRay.push(nCount) //add record to array
+							}
+					}
+						foreach(idx , val in aRay) //for each value in array
+							{
+								print("TABLE: idx = " +idx+ " // Record = "+val)
+							}						
+		switch(nSub)
+			{
+				case 0: // System settings
+					ICR_AdvertiseProgramSetting("Script Details", "SCRIPTVERINF"); // Show script info		
+					local nID = ICR_AdvertiseProgramSetting("Itemiser to use", "ITEMISER");  // Itemiser to use
+					ICR_ProgramItem_SetOptionList(nID,1) // Show options
+					local nID = ICR_AdvertiseProgramSetting("Deposit key to use", "DEPOSIT");  // Itemiser to use
+					ICR_ProgramItem_SetOptionList(nID,2) // Show options		
+					break;
+				default: 
+					ICR_AdvertiseProgramHeading("This menu doesn't exist"); // If they break my menus
+					break; // Stop
+			}
+	}
+	
+/*------------------------------------------------------------------------------------------------------------------------------------------*/
+	
+function OnEnterPGMOptionList(nID)
+	{
+		ICR_PurgeProgramOptionList(); // Purge settings
+		switch(nID) 
+			{
+				case 1: // If list 1
+					ICR_ProgramOptionList_Add("Itemiser 1",1) // Itemiser 1
+					ICR_ProgramOptionList_Add("Itemiser 2",2) // Itemiser 2
+					ICR_ProgramOptionList_Add("Itemiser 3",3) // Itemiser 3
+					ICR_ProgramOptionList_Add("Itemiser 4",4) // Itemiser 3
+					ICR_ProgramOptionList_Add("Itemiser 5",5) // Itemiser 3
+					break; // Stop
+				case 2:
+						local aLength = aRay.len() //length of array
+						print("Array length = "+aLength)	
+					for(local nCount = 1; nCount <= ((aLength-1)/2); nCount++)
+						{
+							local dName = aRay[2 * nCount - 1]
+							local dNumb = aRay[2 * nCount]
+							ICR_ProgramOptionList_Add(dName, dNumb)
+						}
+				default:
+					break; // Stop
+			}
+	}
+	
+/*-------------------------------------------------------------------------------------------------------*/

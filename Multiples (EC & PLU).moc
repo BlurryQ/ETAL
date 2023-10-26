@@ -1,0 +1,73 @@
+﻿local bDebugPrinting = true;	// set this false to disable all the debug printing in the output file
+
+dofile("etal\\lib\\keys.moc"); //load keys.moc
+
+local nMultNumb = 30 //multiply nNumber
+local nECNumb = 31//error correcct nNumber
+
+function OnInit()
+{
+
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+
+local nMultiply = CheckForKey( { NAME = "" , FILE = 53, KEYTYPE = 73} ); //create STS key
+print("Multiply key is on record " + nMultiply) //print record number
+ICR_SetLocalUserData("MULTIPLY",nMultiply) //save record number locally
+
+local nEC = CheckForKey( { NAME = "" , FILE = 52, KEYTYPE = 37} ); //create TRN key
+print("Error Correct is on record " + nEC) //print record number
+ICR_SetLocalUserData("EC",nEC) //save record number locally
+}
+
+/*--------------------------------------------------------------------------------------------------------------------*/
+
+function OnRunScriptKeyPress (nFile, nRecord, nNumber, nValue, nFlag)
+	{
+		if(nNumber == nMultNumb) //If our key
+			{			
+				local nMultiply = ICR_GetLocalUserData("MULTIPLY") //get record number locally
+				local nTotal = ICR_GetNumberDialog("Enter total required") //enter number of items required
+					if(nTotal >= 10)
+						{
+							local nConfirm = ICR_MessageBox("You have entered " + nTotal,"Is this correct?","",1) //confirm quantity is above 10
+								if(nConfirm != 1)
+									{
+										ICR_MessageBox("Cancelling entry","","",0) //cancelling entry
+										return false;
+									}
+						}
+				ICR_SetInput(nTotal) //set input
+				ICR_KeyPress(53,nMultiply) //multiply
+			}
+		if(nNumber == nECNumb) //If our key
+			{
+				local nBuff = ICR_GetClerkBuffer_Index() //get items in sale
+				local cItem = nBuff.SELITEM //get selected item location in sale
+				local nItem = ICR_GetClerkBuffer_Item(cItem) //get selected items details
+				local qItem = nItem.QUANTITY / 100 //get selected item quantity
+				print("Total in line " + qItem) 
+				
+				local nEC = ICR_GetLocalUserData("EC") //get record number locally
+				local nTotal = ICR_GetNumberDialog("Enter total to remove") //enter number of items to remove
+				if(nTotal > qItem && qItem == 1)
+					{
+						ICR_Sound(2)// Error Noise
+						ICR_MessageBox("You entered " + nTotal + " but you can", "only error correct " + qItem + " more time!","Error",0) // Message explaining error
+						return false // Do not proceed	
+					}
+				if(nTotal > qItem && qItem > 1)
+					{
+						ICR_Sound(2)// Error Noise
+						ICR_MessageBox("You entered " + nTotal + " but you can","only error correct " + qItem + " more times!","Error",0) // Message explaining error
+						return false // Do not proceed		
+					}
+					
+				for( local nCount = 1; nCount <=  nTotal; nCount++) //count up
+					{
+						ICR_KeyPress(52,nEC) //press error correct
+					}	
+			}
+	}

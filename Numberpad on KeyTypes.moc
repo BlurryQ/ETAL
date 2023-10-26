@@ -1,0 +1,56 @@
+﻿dofile("etal\\lib\\keys.moc"); // Load Keys from lib (auto crate key)
+
+local bDebugPrinting = false;	// set this false to disable all the debug printing in the output file
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+
+ICR_SetLocalUserData("ENABLED",true) //turn script on
+}
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function BeforeKeyPress(nFile, nRecord, nKeytype)
+	{
+		if(nKeytype == 20 || nKeytype == 21 || nKeytype == 22 || nKeytype == 23)
+			{
+				local nEnabled = ICR_GetLocalUserData("ENABLED")
+					if(nEnabled ==true)
+						{
+							print("I have just pressed file: " + nFile + " & record: " + nRecord)
+							local nInput = ICR_GetNumberDialog("Enter Value", "",0)
+							ICR_SetInput(nInput)
+						}
+					else
+						{
+							return true;
+						}
+			}				
+		else
+			{
+				return true;
+			}
+	}
+		
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+		
+function OnEnterPGMMenu(nSub) // When entering PGM 3
+	{
+		ICR_PurgeProgramSettings(); // Clear settings and repull data
+		switch(nSub)
+			{
+				case 0: // System settings
+					ICR_AdvertiseProgramSetting("Script Details", "SCRIPTVERINF"); // Show script info		
+					ICR_AdvertiseProgramSetting("Enable numberpad?", "ENABLED");  // Itemiser to use
+					break;
+				default: 
+					ICR_AdvertiseProgramHeading("This menu doesn't exist"); // If they break my menus
+					break; // Stop
+			}
+	}

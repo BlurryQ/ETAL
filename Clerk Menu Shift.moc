@@ -1,0 +1,108 @@
+﻿dofile("etal\\lib\\keys.moc"); // Load Keys from lib (auto crate key)
+
+local bDebugPrinting = false;	// set this false to disable all the debug printing in the output file
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function OnInit()
+	{
+		ICR_EnableDebugLog(true);	
+		ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+		ICR_SetFeature("CONSOLE",bDebugPrinting);
+		ICR_SetFeature("AUTORESTART",bDebugPrinting);
+
+		ICR_SetLocalUserData("CLERKON",false,true) //set clerk menu shift on
+		ICR_SetLocalUserData("MENU", 0, true) //set default menu STS record
+
+		local nPGM = ICR_GetPGMData(399,53); //Get STS Data
+		local sMax = nPGM.SIZE //Get STS Maximim file size
+		print("Status key file size is "+sMax)
+		ICR_SetLocalUserData("STSSIZE", sMax) //set STS record size
+	}
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function AfterSignOn(nClerk)
+	{
+		local tSys = ICR_GetSystemData() //get system data
+		local nMode = tSys.MODE //get currnet mode
+		print("Currently in Mode " +nMode)
+		if(nMode == 1 || nMode == 3) //if sales or refund mode
+			{
+				local cEnable = ICR_GetLocalUserData("CLERKON") //get clerk menu shift on
+				if(cEnable == true) //if clerk menu shift enabled
+					{
+						local nMenu = ICR_GetLocalUserData("MENU") //get default menu STS record
+						ICR_KeyPress(53,nMenu) //press menu level
+					}
+			}
+	}
+	
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+	
+function AfterKeyPress (nFile,nRecord,nKeyType)
+	{
+		if(nFile == 53 && nRecord == 101 || nFile == 53 && nRecord == 104)
+			{
+				local cEnable = ICR_GetLocalUserData("CLERKON") //get clerk menu shift on
+				if(cEnable == true) //if clerk menu shift enabled
+					{
+						local nClerk = ICR_GetCurrentClerk();
+						if(nClerk !=0)
+							{
+								local nMenu = ICR_GetLocalUserData("MENU") //get default menu STS record
+								ICR_KeyPress(53,nMenu) //press menu level
+							}
+						else
+							{
+								return true;
+							}
+					}
+			}
+	}
+	
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function OnEnterPGMMenu(nSub) // When entering PGM 3
+	{
+		ICR_PurgeProgramSettings(); // Clear settings and repull data
+		switch(nSub)
+			{
+				case 0: // System settings
+					ICR_AdvertiseProgramSetting("Script Details", "SCRIPTVERINF"); // Show script info
+					ICR_AdvertiseProgramHeading("Clerk Menu Shift");// Heading
+					ICR_AdvertiseProgramSetting("Enable clerk default menu shift?", "CLERKON");  // Itemiser to use
+					local nID = ICR_AdvertiseProgramSetting("Default Menu Level", "MENU");  // default menu to use
+					ICR_ProgramItem_SetOptionList(nID,1)					
+					break;
+				default: 
+					ICR_AdvertiseProgramHeading("This menu doesn't exist"); // If they break my menus
+					break; // Stop
+			}
+	}
+	
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------*/
+	
+function OnEnterPGMOptionList(nID)
+	{
+		local sMax = ICR_GetLocalUserData("STSSIZE") //get STS record size
+		
+		ICR_PurgeProgramOptionList(); //clear data
+		switch(nID)
+			{
+				case 1:
+					for(local nCount = 1; nCount <= sMax; nCount++) //count all STS keys
+						{
+							local nSTS = ICR_GetPGMData(53,nCount) //get STS key info
+							local sKeyType = nSTS.KEYTYPE //get STS key types
+							if(sKeyType == 160) //if menu shift
+								{
+									local sName = nSTS.NAME //get STS name
+									ICR_ProgramOptionList_Add(sName, nCount) //add to list
+								}
+						}
+					break;
+				default:
+					break;
+			}
+	}

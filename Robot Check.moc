@@ -1,0 +1,26 @@
+local bDebugPrinting = true;	// set this false to disable all the debug printing in the output file
+
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+}
+///////////////////////////////////////////
+
+function BeforeKeyPress(nFile, nRecord, nKeyType)
+{
+	if(nKeyType == 72) //Clerk Sign On
+	{
+		if(ICR_MessageBox("Are you a robot", "", "Captcha",1)) //Question 1
+		{
+			ICR_MessageBox("Captcha Failure", "", "3RR0R", 0) // Error message
+			return false;
+		}
+		else
+		{
+			return true;
+		}
+	}		
+}

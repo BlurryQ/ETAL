@@ -1,0 +1,53 @@
+﻿local bDebugPrinting = true;	// set this false to disable all the debug printing in the output file
+
+function OnInit()
+{
+ICR_EnableDebugLog(true);	
+ICR_AdvertiseProgramSetting("Version Info", "SCRIPTVERINF");
+ICR_SetFeature("CONSOLE",bDebugPrinting);
+ICR_SetFeature("AUTORESTART",bDebugPrinting);
+}
+
+/*-------------------------------------------------------------------------------------------------------------------------------------------*/
+
+function AfterSignOn(nclerk)
+	{
+	local tClerk = ICR_GetPGMData(5,nclerk); //Check clerk flags
+	
+	if(tClerk == 211);
+			{
+			ICR_DataEntryDialog_AddItem("£50",false, "", 3, 10,2);
+			ICR_DataEntryDialog_AddItem("£20",false, "", 3, 10,1);
+			ICR_DataEntryDialog_AddItem("£10",false, "", 3, 10,3);
+			ICR_DataEntryDialog_AddItem("£5",false, "", 3, 10,4);
+			ICR_DataEntryDialog_AddItem(" Ok?", false, "" 10);
+			local tResults = ICR_DataEntryDialog("Float Values");
+			ICR_MessageBox("They have £" + tResults.FIELD1, " in £50", "", 0);
+			ICR_MessageBox("They have £" + tResults.FIELD2, " in £20", "", 0);
+			ICR_MessageBox("They have £" + tResults.FIELD4, " in £10", "", 0);
+			ICR_MessageBox("They have £" + tResults.FIELD4, " in £5", "", 0);
+			}
+
+	}
+		
+/*
+ICR_DataEntryDialog_AddItem(szFieldName, bFirstItem, szData [, nDataType] [,
+nMaxLength] [, nDP] [, bReadOnly])
+Adds a new item to the current list of dialog items.
+Setting bFirstItem to true resets the list.
+szData is the original data that can be edited
+nDataType is optional and the type of data in the field. For a list of types see Constant values
+nMaxLength is optional and represents the maximum allowable length
+nDP is for numerical fields and is the number of decimal places. If data type is Drop down window
+then the window number is stored in here
+bReadOnly when set to true means this field cannot be edited
+
+Data Entry Dialog Data Types
+Name ID
+Yes/No 1
+String 2
+Number 3
+Drop Down Window 4
+Ok 10
+
+*/
