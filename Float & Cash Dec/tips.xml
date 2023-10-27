@@ -1,0 +1,5 @@
+<SKIN>
+  <WINDOW left="550" top="100" width="420" height="170">
+  <BACKGROUND image="window.bmp" TransparentColour="00FF00FF" /> 
+</WINDOW>
+</SKIN>
