@@ -73,6 +73,8 @@ function resetData() {
 	ICR_RedrawScreen(); // Redraw window	
 
 /* ------------------------------- plu setting ------------------------------- */
+
+	ICR_SetLocalUserData("EDIT_PLU_RECORD", 0)
 	ICR_SetLocalUserData("PLU_RECORD", 0);
 	ICR_SetLocalUserData("PLU_NAME", "No PLU Selected");
 	ICR_SetLocalUserData("PRICE1", 0)
@@ -194,10 +196,12 @@ function BeforeKeyPress(nFile, nRecord, nKeytype)
 			local editPLUEnabled = ICR_GetLocalUserData("EDIT_PLU")
 			switch(nFile) {
 				case 1: if(editPLUEnabled) {
-						ICR_MessageBox(
-						"You are presseing PLU " + nRecord + "" , "with name of ..." , 
-						"Edit PLU" , 0); 
-						return false; //this will change
+						local editPLU = ICR_MessageBox("Would you like to edit PLU " + nRecord + "" , "with name of " +getPLUName(nRecord), "Edit PLU" , 1); 
+						if(editPLU) { 
+							ICR_SetLocalUserData("EDIT_PLU_RECORD", nRecord)
+							local nTimerID = ICR_StartTimer(100);
+							return false
+							}
 						}
 						return false;
 				case 53: return true;
@@ -210,6 +214,27 @@ function BeforeKeyPress(nFile, nRecord, nKeytype)
 
 /*-------------------------------------------------------------------------------------------------------*/
 
+function OnTimer(nTimerID, nSystemTime) 
+{
+	ICR_StopTimer(nTimerID)
+	startEditPLU()
+	ICR_RedrawScreen();
+}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function startEditPLU() {
+	local record = ICR_GetLocalUserData("EDIT_PLU_RECORD")
+	ICR_SetLocalUserData("MENU", 1)
+	ICR_Window_Enable (nWindowID,true) //open window
+	local pluDept = getDepartment(record)
+	local deptName = getDeptName(pluDept)
+	ICR_SetLocalUserData("DEPT_NAME", deptName);
+	populatePLUData(record)
+}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
 function PaintWindow() //This is where I put the things I want in the window (custom function)
 {
 	local menuOption = ICR_GetLocalUserData("MENU")
@@ -219,6 +244,198 @@ function PaintWindow() //This is where I put the things I want in the window (cu
 	ICR_SelectFont(titleFont); // Selecting font
     ICR_SetText_Colour(cBlack); //Colour = black
 	switch(menuOption) {
+			case 1: //Edit PLU
+				ICR_DrawFrame(4, 4, 592, 642, 2, cBlack);
+				ICR_DrawText (200, 10, "Create PLU");
+
+				ICR_SelectFont(fontTwenty)
+				ICR_SetText_Colour(cBlack); //Colour = black
+				ICR_DrawText (20, 10, "PLU Record");
+				ICR_DrawBox(25, 30, 65, 25, cBlack);
+
+				ICR_SelectFont(fontThirty)
+				ICR_SetText_Colour(cBlack); //Colour = black
+				ICR_DrawText (120, 60, "Department");
+				ICR_DrawBox(100, 90, 160, 30, cBlack);
+
+				ICR_DrawText (350, 60, "Name");
+				ICR_DrawBox(300, 90, 200, 30, cBlack);
+				if(bSelect == 102) {// If this box is selected 
+					ICR_DrawFrame(300, 90, 200, 30, 3, cGreen); // When selected draw 3px black frame
+				}
+				bLocation[102] <- {"WINDOW": 1, "LEFT": 1300, "TOP": 1090, "BOTTOM": 1120, "RIGHT": 1500 }; // Save location of box
+/*	PRICES	*/
+				ICR_DrawText (50, 130, "Price 1");
+				ICR_DrawBox(35, 160, 100, 30, cBlack);
+				if(bSelect == 103) {// If this box is selected 
+					ICR_DrawFrame(35, 160, 100, 30, 3, cGreen); // When selected draw 3px black frame
+				}
+				bLocation[103] <- {"WINDOW": 1, "LEFT": 1035, "TOP": 1160, "BOTTOM": 1190, "RIGHT": 1135 }; // Save location of box
+
+				ICR_DrawText (175, 130, "Price 2 (Halves)");
+				ICR_DrawBox(200, 160, 100, 30, cBlack);
+				if(bSelect == 104) {// If this box is selected 
+					ICR_DrawFrame(200, 160, 100, 30, 3, cGreen); // When selected draw 3px black frame
+				}
+				bLocation[104] <- {"WINDOW": 1, "LEFT": 1200, "TOP": 1160, "BOTTOM": 1190, "RIGHT": 1300 }; // Save location of box
+
+				ICR_DrawText (360, 130, "Price 3 (Doubles)");
+				ICR_DrawBox(385, 160, 100, 30, cBlack);
+				if(bSelect == 105) {// If this box is selected 
+					ICR_DrawFrame(385, 160, 100, 30, 3, cGreen); // When selected draw 3px black frame
+				}
+				bLocation[105] <- {"WINDOW": 1, "LEFT": 1385, "TOP": 1160, "BOTTOM": 1190, "RIGHT": 1485 }; // Save location of box
+
+				ICR_DrawText (60, 200, "Tax Rate");
+				ICR_DrawBox(35, 230, 160, 30, cBlack);
+				if(bSelect == 106) {// If this box is selected 
+					ICR_DrawFrame(35, 230, 160, 30, 3, cGreen); // When selected draw 3px black frame
+				}
+				bLocation[106] <- {"WINDOW": 1, "LEFT": 1035, "TOP": 1230, "BOTTOM": 1260, "RIGHT": 1195 }; // Save location of box
+
+				ICR_DrawText (240, 200, "Zero Price?");
+				ICR_DrawBox(270, 230, 30, 30, cBlack);
+				if(bSelect == 107) {// If this box is selected 
+					ICR_DrawFrame(270, 230, 30, 30, 3, cGreen); // When selected draw 3px black frame
+				}
+				bLocation[107] <- {"WINDOW": 1, "LEFT": 1270, "TOP": 1230, "BOTTOM": 1260, "RIGHT": 1300 }; // Save location of box
+
+				ICR_DrawText (380, 200, "Manual Price");
+				ICR_DrawBox(410, 230, 30, 30, cBlack);
+				if(bSelect == 108) {// If this box is selected 
+					ICR_DrawFrame(410, 230, 30, 30, 3, cGreen); // When selected draw 3px black frame
+				}
+				bLocation[108] <- {"WINDOW": 1, "LEFT": 1410, "TOP": 1230, "BOTTOM": 1260, "RIGHT": 1440 }; // Save location of box
+
+/*	LISTS	*/
+
+				local y = 280;
+				local boxNumber = 109;
+				for (local nCount = 1 ; nCount <= 5; nCount++) {
+					local yTop = 1000 + y;
+					local yBottom = yTop + 30;
+
+					ICR_DrawText (40, y, "PLU  " + nCount);		
+					ICR_DrawBox(125, y, 200, 30, cBlack);	
+					if(bSelect == boxNumber) {// If this box is selected 
+						ICR_DrawFrame(125, y, 200, 30, 3, cGreen); // When selected draw 3px black frame
+					}
+					bLocation[boxNumber] <- {"WINDOW": 1, "LEFT": 1125, "TOP": yTop, "BOTTOM": yBottom, "RIGHT": 1325 }; // Save location of box
+				
+					boxNumber++;
+					y += 50;
+				}
+
+/*	KP'S	*/
+
+				local y = 280;
+				local boxNumber = 114;
+				for (local nCount = 1 ; nCount <= 5; nCount++) {
+					local yTop = 1000 + y;
+					local yBottom = yTop + 30;
+
+					ICR_DrawText (370, y, "KP  " + nCount);		
+					ICR_DrawBox(430, y, 30, 30, cBlack);	
+					if(bSelect == boxNumber) {// If this box is selected 
+						ICR_DrawFrame(430, y, 30, 30, 3, cGreen); // When selected draw 3px black frame
+					}
+					bLocation[boxNumber] <- {"WINDOW": 1, "LEFT": 1430, "TOP": yTop, "BOTTOM": yBottom, "RIGHT": 1460 }; // Save location of box
+				
+					boxNumber++;
+					y += 50;
+				}
+
+/*	ITEMISERS	*/
+
+				local x = 10;
+				local boxNumber = 119;
+				for (local nCount = 1 ; nCount <= 5; nCount++) {
+
+					local xLeft = 1040 + x;
+					local xRight = xLeft + 40;
+
+					ICR_DrawText (x, 522, "Itemiser " + nCount);		
+					ICR_DrawBox(x + 40, 550, 30, 30, cBlack);	
+					if(bSelect == boxNumber) {// If this box is selected 
+						ICR_DrawFrame(x + 40, 550, 30, 30, 3, cGreen); // When selected draw 3px black frame
+					}
+					bLocation[boxNumber] <- {"WINDOW": 1, "LEFT": xLeft, "TOP": 1550, "BOTTOM": 1580, "RIGHT": xRight }; // Save location of box
+					
+					boxNumber++;
+					x += 120;
+				}
+
+/*	CONFIRM	*/	
+
+				ICR_DrawBox(240, 600, 110, 30, cGreen);
+				ICR_DrawText (250,600,"Confirm");
+				if(bSelect == 130) {// If this box is selected 
+					ICR_DrawFrame(240, 600, 110, 30, 3, cBlack); // When selected draw 3px black frame
+				}
+				bLocation[130] <- {"WINDOW": 1, "LEFT": 1240, "TOP": 1600, "BOTTOM": 1630, "RIGHT": 1350 }; // Save location of box
+
+/*	TEXT UPDATES	*/
+
+				ICR_SetText_Colour(cWhite); //Colour = white
+				local deptName = ICR_GetLocalUserData("DEPT_NAME")
+				ICR_DrawText (103,90, deptName);
+				local newPLU = ICR_GetLocalUserData("PLU_RECORD")
+				ICR_DrawText (25,27,newPLU);
+
+				local PLUName = ICR_GetLocalUserData("PLU_NAME") ;
+				ICR_DrawText (313,90, PLUName);
+
+				local price1 = ICR_GetLocalUserData("PRICE1")
+				price1 = format("%0.2f",price1.tofloat()/100)
+				ICR_DrawText (43,161, price1);
+				local price2 = ICR_GetLocalUserData("PRICE2")
+				price2 = format("%0.2f",price2.tofloat()/100)
+				ICR_DrawText (208,161, price2);
+				local price3 = ICR_GetLocalUserData("PRICE3")
+				price3 = format("%0.2f",price3.tofloat()/100)
+				ICR_DrawText (393,161, price3);
+
+				local taxRate = ICR_GetLocalUserData("TAX_NAME")
+				ICR_DrawText (41,230, taxRate);
+				local zeroPrice = ICR_GetLocalUserData("ZEROPRICE")
+				if(zeroPrice) { ICR_DrawText (277,230, "X"); }
+				local override = ICR_GetLocalUserData("PLUPRESET_OVERRIDE");
+				if(override) { ICR_DrawText (417,230, "X"); }
+
+				local listPLU1 = ICR_GetLocalUserData("LISTPLU1")
+				ICR_DrawText (130, 280, listPLU1);
+				local listPLU2 = ICR_GetLocalUserData("LISTPLU2")
+				ICR_DrawText (130, 330, listPLU2);
+				local listPLU3 = ICR_GetLocalUserData("LISTPLU3")
+				ICR_DrawText (130, 380, listPLU3);
+				local listPLU4 = ICR_GetLocalUserData("LISTPLU4")
+				ICR_DrawText (130, 430, listPLU4);
+				local listPLU5 = ICR_GetLocalUserData("LISTPLU5")
+				ICR_DrawText (130, 480, listPLU5);
+
+				local kp1 = ICR_GetLocalUserData("KP1")
+				if(kp1) { ICR_DrawText (437, 280, "X"); }
+				local kp2 = ICR_GetLocalUserData("KP2")
+				if(kp2) { ICR_DrawText (437, 330, "X"); }
+				local kp3 = ICR_GetLocalUserData("KP3")
+				if(kp3) { ICR_DrawText (437, 380, "X"); }
+				local kp4 = ICR_GetLocalUserData("KP4")
+				if(kp4) { ICR_DrawText (437, 430, "X"); }
+				local kp5 = ICR_GetLocalUserData("KP5")
+				if(kp5) { ICR_DrawText (437, 480, "X"); }
+
+				local itemiser1 = ICR_GetLocalUserData("ITEMISER1")
+				if(itemiser1) { ICR_DrawText (57, 550, "X"); }
+				local itemiser2 = ICR_GetLocalUserData("ITEMISER2")
+				if(itemiser2) { ICR_DrawText (177, 550, "X"); }
+				local itemiser3 = ICR_GetLocalUserData("ITEMISER3")
+				if(itemiser3) { ICR_DrawText (297, 550, "X"); }
+				local itemiser4 = ICR_GetLocalUserData("ITEMISER4")
+				if(itemiser4) { ICR_DrawText (417, 550, "X"); }
+				local itemiser5 = ICR_GetLocalUserData("ITEMISER5")
+				if(itemiser5) { ICR_DrawText (537, 550, "X"); }
+
+				break;
 			case 2: //Create PLU
 				ICR_DrawFrame(4, 4, 592, 642, 2, cBlack);
 				ICR_DrawText (200, 10, "Create PLU");
@@ -1086,12 +1303,126 @@ function OnMouseEvent(nWindowID, nEvent, nX, nY) {
 										ICR_SetLocalUserData("EMPTY_DISC_RECORD", emptyDisc);
 										break;	
 
+							case 102: 	//name selector
+										local newName = getPLUName();
+										ICR_SetLocalUserData("PLU_NAME", newName);
+										break;
+							case 103:	//price 1 selector
+										local newPrice = getPrice();
+										ICR_SetLocalUserData("PRICE1", newPrice);
+										break;
+							case 104:	//price 2 selector
+										local newPrice = getPrice();
+										ICR_SetLocalUserData("PRICE2", newPrice);
+										break;
+							case 105:	//price 3 selector
+										local newPrice = getPrice();
+										ICR_SetLocalUserData("PRICE3", newPrice);
+										break;
+							case 106:	//tax rate selector
+										local taxRec = getTaxRate();
+										local taxName = getTaxName(taxRec);
+										ICR_SetLocalUserData("TAX_REC", taxRec);
+										ICR_SetLocalUserData("TAX_NAME", taxName);
+										break;
+							case 107:	//zero price selector
+										local zeroPrice = ICR_GetLocalUserData("ZEROPRICE");
+										if(zeroPrice) { zeroPrice = 0;
+										} else { zeroPrice = 1;}
+										ICR_SetLocalUserData("ZEROPRICE", zeroPrice);
+										break;
+							case 108: 	//preset override selector
+										local override = ICR_GetLocalUserData("PLUPRESET_OVERRIDE");
+										if(override) { override = 0;
+										} else { override = 4;}
+										ICR_SetLocalUserData("PLUPRESET_OVERRIDE", override);
+										break;
+							case 109:	//list 1 selector
+										local listRec = getList();
+										local listName = getListName(listRec)
+										ICR_SetLocalUserData("LISTREC1", listRec);
+										ICR_SetLocalUserData("LISTPLU1", listName);
+										break;
+							case 110:	//list 2 selector
+										local listRec = getList();
+										local listName = getListName(listRec)
+										ICR_SetLocalUserData("LISTREC2", listRec);
+										ICR_SetLocalUserData("LISTPLU2", listName);
+										break;
+							case 111:	//list 3 selector
+										local listRec = getList();
+										local listName = getListName(listRec)
+										ICR_SetLocalUserData("LISTREC3", listRec);
+										ICR_SetLocalUserData("LISTPLU3", listName);
+										break;
+							case 112:	//list 4 selector
+										local listRec = getList();
+										local listName = getListName(listRec)
+										ICR_SetLocalUserData("LISTREC4", listRec);
+										ICR_SetLocalUserData("LISTPLU4", listName);
+										break;
+							case 113:	//list 5 selector
+										local listRec = getList();
+										local listName = getListName(listRec)
+										ICR_SetLocalUserData("LISTREC5", listRec);
+										ICR_SetLocalUserData("LISTPLU5", listName);
+										break;
+							case 114:	//kp1 selector
+										local kp1 = ICR_GetLocalUserData("KP1");
+										if(kp1) { kp1 = false
+										} else { kp1 = true }	
+										ICR_SetLocalUserData("KP1", kp1);
+										break;		
+							case 115:	//kp2 selector
+										local kp2 = ICR_GetLocalUserData("KP2");
+										if(kp2) { kp2 = false
+										} else { kp2 = true }	
+										ICR_SetLocalUserData("KP2", kp2);
+										break;		
+							case 116:	//kp3 selector
+										local kp3 = ICR_GetLocalUserData("KP3");
+										if(kp3) { kp3 = false
+										} else { kp3 = true }	
+										ICR_SetLocalUserData("KP3", kp3);
+										break;		
+							case 117:	//kp4 selector
+										local kp4 = ICR_GetLocalUserData("KP4");
+										if(kp4) { kp4 = false
+										} else { kp4 = true }	
+										ICR_SetLocalUserData("KP4", kp4);
+										break;		
+							case 118:	//kp5 selector
+										local kp5 = ICR_GetLocalUserData("KP5");
+										if(kp5) { kp5 = false
+										} else { kp5 = true }	
+										ICR_SetLocalUserData("KP5", kp5);
+										break;
+							case 119:	//itemiser 1 selector
+										toggleItemiser(1)
+										break;		
+							case 120:	//itemiser 2 selector
+										toggleItemiser(2)
+										break;		
+							case 121:	//itemiser 3 selector
+										toggleItemiser(3)
+										break;		
+							case 122:	//itemiser 4 selector
+										toggleItemiser(4)
+										break;		
+							case 123:	//itemiser 5 selector
+										toggleItemiser(5)
+										break;	
+							case 130:	//confirm button
+										confirmPLU()
+										ICR_Window_Enable (nWindowID, false) //close open window
+										break;	
+
 							case 201: 	//department selector
-										local selectedDepartment = getDepartment()
+										local selectedDepartment = selectDepartment()
 										if(selectedDepartment.RECORD != 0) {
 											ICR_SetLocalUserData("DEPT_NAME", selectedDepartment.NAME);
 											local newPLU = getPLU(selectedDepartment.RECORD);
-											populateCreatePLUData(newPLU)
+											populatePLUData(newPLU)
 										}
 										break;
 							case 202: 	//name selector
@@ -1204,7 +1535,7 @@ function OnMouseEvent(nWindowID, nEvent, nX, nY) {
 										toggleItemiser(5)
 										break;	
 							case 230:	//confirm button
-										confirmNewPLU()
+										confirmPLU()
 										break;	
 
 /* 	EDIT LIST */			case 300:	local list = getListToEdit();
@@ -1513,7 +1844,19 @@ function OnMouseEvent(nWindowID, nEvent, nX, nY) {
 									CREATE PLU
 -------------------------------------------------------------------------------------------------------*/
 
-function getDepartment() {
+function getDepartment(record) {
+	return ICR_GetPGMData(1, record).DEPT
+}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function getDeptName(record) {
+	return ICR_GetPGMData(55, record).NAME
+}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function selectDepartment() {
 	local deptArray = [];
 	local result = {};	
 	deptArray.push(0) //add 0 to array
@@ -1598,7 +1941,7 @@ function removeSpaces(aText) {
 
 /*-------------------------------------------------------------------------------------------------------*/
 
-function populateCreatePLUData(newPLU) {
+function populatePLUData(newPLU) {
 	ICR_SetLocalUserData("PLU_RECORD", newPLU);
 
 	local nPLU = ICR_GetPGMData(1, newPLU);
@@ -1786,16 +2129,11 @@ function getPLUName(record = 0) {
 /*-------------------------------------------------------------------------------------------------------*/
 
 function findPLU(name) {
-	//for looop from PLU 12001 - 12999
 	for (local PLU = 12001 ; PLU <= 12999; PLU++)
 	{
-		//get PLU data
 		local PLUName = getPLUName(PLU)
-		//if name matches retrun name
 		if(PLUName == name) { return PLU }
-		//else continue
 	}
-	//exit loop. if not found create new PLU
 	local messagePLU = getPLU(62)
 	local createPLU = ICR_GetPGMData(1, messagePLU);
 	createPLU.NAME = name;
@@ -1880,7 +2218,7 @@ function getItemiserFlagValue() {
 
 /*-------------------------------------------------------------------------------------------------------*/
 
-function confirmNewPLU() {
+function confirmPLU() {
 	local result =ICR_MessageBox("Are you sure you wish to confirm?" , "" , "CONFIRM" , 1);
 	if(!result) {
 		return false;
@@ -2340,7 +2678,7 @@ function getDiscFlagData(flagValue) {
 }
 
 
-/*-------------------------------------------------------------------------------------------------------*//*-------------------------------------------------------------------------------------------------------
+/*-------------------------------------------------------------------------------------------------------
 									CREATE DISCOUNT
 -------------------------------------------------------------------------------------------------------*/
 
