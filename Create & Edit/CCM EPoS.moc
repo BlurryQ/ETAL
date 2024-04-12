@@ -104,6 +104,7 @@ function resetData() {
 
 /* ------------------------------- list setting ------------------------------- */
 
+	ICR_SetLocalUserData("LIST_TO_EDIT", 0);
 	ICR_SetLocalUserData("EMPTYLIST", 0)
 	ICR_SetLocalUserData("NEWLISTNAME", 0)
 
@@ -127,6 +128,27 @@ function resetData() {
 	ICR_SetLocalUserData("ITEM18", "No PLU Selected");
 	ICR_SetLocalUserData("ITEM19", "No PLU Selected");
 	ICR_SetLocalUserData("ITEM20", "No PLU Selected");
+
+	ICR_SetLocalUserData("ITEM1_RECORD", 0);
+	ICR_SetLocalUserData("ITEM2_RECORD", 0);
+	ICR_SetLocalUserData("ITEM3_RECORD", 0);
+	ICR_SetLocalUserData("ITEM4_RECORD", 0);
+	ICR_SetLocalUserData("ITEM5_RECORD", 0);
+	ICR_SetLocalUserData("ITEM6_RECORD", 0);
+	ICR_SetLocalUserData("ITEM7_RECORD", 0);
+	ICR_SetLocalUserData("ITEM8_RECORD", 0);
+	ICR_SetLocalUserData("ITEM9_RECORD", 0);
+	ICR_SetLocalUserData("ITEM10_RECORD", 0);
+	ICR_SetLocalUserData("ITEM11_RECORD", 0);
+	ICR_SetLocalUserData("ITEM12_RECORD", 0);
+	ICR_SetLocalUserData("ITEM13_RECORD", 0);
+	ICR_SetLocalUserData("ITEM14_RECORD", 0);
+	ICR_SetLocalUserData("ITEM15_RECORD", 0);
+	ICR_SetLocalUserData("ITEM16_RECORD", 0);
+	ICR_SetLocalUserData("ITEM17_RECORD", 0);
+	ICR_SetLocalUserData("ITEM18_RECORD", 0);
+	ICR_SetLocalUserData("ITEM19_RECORD", 0);
+	ICR_SetLocalUserData("ITEM20_RECORD", 0);
 
 /* ------------------------------- discount setting ------------------------------- */
 
@@ -197,7 +219,7 @@ function PaintWindow() //This is where I put the things I want in the window (cu
 	ICR_SelectFont(titleFont); // Selecting font
     ICR_SetText_Colour(cBlack); //Colour = black
 	switch(menuOption) {
-/* CREATE PLU */case 2: //Create PLU
+			case 2: //Create PLU
 				ICR_DrawFrame(4, 4, 592, 642, 2, cBlack);
 				ICR_DrawText (200, 10, "Create PLU");
 
@@ -394,8 +416,102 @@ function PaintWindow() //This is where I put the things I want in the window (cu
 				if(itemiser5) { ICR_DrawText (537, 550, "X"); }
 
 				break;
-/*EDIT LIST*/case 3: //Edit List
-				ICR_DrawText (200,10,"Edit List");
+			case 3: //Edit List
+				ICR_DrawFrame(4, 4, 592, 642, 2, cBlack);		
+				ICR_DrawText (200, 10,"Edit List");
+
+				ICR_SelectFont(fontTwenty)
+				ICR_SetText_Colour(cBlack); //Colour = black
+				ICR_DrawText (20, 10,"List Record");
+				ICR_DrawBox(25, 30, 65, 25, cBlack);
+
+				ICR_SelectFont(fontThirty)
+				ICR_SetText_Colour(cBlack); //Colour = black
+				ICR_DrawText (120, 70,"List Name");
+				ICR_DrawBox(240, 70, 200, 30, cBlack);
+				if(bSelect == 300) {// If this box is selected 
+					ICR_DrawFrame(240, 70, 200, 30, 3, cGreen); // When selected draw 3px black frame
+				}
+				bLocation[300] <- {"WINDOW": 3, "LEFT": 3240, "TOP": 3070, "BOTTOM": 3100, "RIGHT": 3440 }; // Save location of box
+
+
+				local y = 120;
+				local boxNumber = 301;
+
+				for (local nCount = 1 ; nCount <= 10; nCount++) {
+					local yTop = 3000 + y;
+					local yBottom = yTop + 30;
+
+					ICR_DrawText (10, y, "PLU  " + nCount);		
+					ICR_DrawBox(90, y, 200, 30, cBlack);	
+					if(bSelect == boxNumber) {// If this box is selected 
+						ICR_DrawFrame(90, y, 200, 30, 3, cGreen); // When selected draw 3px black frame
+					}
+					bLocation[boxNumber] <- {"WINDOW": 3, "LEFT": 3090, "TOP": yTop, "BOTTOM": yBottom, "RIGHT": 3290 }; // Save location of box
+				
+					boxNumber++;
+					y += 40;
+				}
+				
+				local y = 120;
+				local boxNumber = 311;
+				for (local nCount = 11 ; nCount <= 20; nCount++) {
+					local yTop = 3000 + y;
+					local yBottom = yTop + 30;
+
+					ICR_DrawText (305, y, "PLU  " + nCount);		
+					ICR_DrawBox(390, y, 200, 30, cBlack);	
+					if(bSelect == boxNumber) {// If this box is selected 
+						ICR_DrawFrame(390, y, 200, 30, 3, cGreen); // When selected draw 3px black frame
+					}
+					bLocation[boxNumber] <- {"WINDOW": 3, "LEFT": 3390, "TOP": yTop, "BOTTOM": yBottom, "RIGHT": 3590 }; // Save location of box
+				
+					boxNumber++;
+					y += 40;
+				}
+				
+
+				ICR_DrawBox(240, 600, 110, 30, cGreen);
+				ICR_DrawText (250,600,"Confirm");
+				if(bSelect == 330) {// If this box is selected 
+					ICR_DrawFrame(240, 600, 110, 30, 3, cBlack); // When selected draw 3px black frame
+				}
+				bLocation[330] <- {"WINDOW": 3, "LEFT": 3240, "TOP": 3600, "BOTTOM": 3630, "RIGHT": 3350 }; // Save location of box
+
+/*	TEXT UPDATES	*/
+
+				local listRecordToEdit = ICR_GetLocalUserData("LIST_TO_EDIT")
+				local listName = getListName(listRecordToEdit)
+				if(listName == "No List Selected") { ICR_DrawFrame(240, 70, 200, 30, 3, cRed); }
+				ICR_SetText_Colour(cWhite); //Colour = white
+				local listRec = listRecordToEdit;
+				ICR_DrawText (25, 28, listRec);
+				ICR_DrawText (245, 70, listName);
+
+				getListItems(listRecordToEdit)
+				local listArray = getListItemsArray();
+
+				ICR_DrawText(100, 120, listArray[1]);
+				ICR_DrawText(100, 160, listArray[2]);
+				ICR_DrawText(100, 200, listArray[3]);
+				ICR_DrawText(100, 240, listArray[4]);
+				ICR_DrawText(100, 280, listArray[5]);
+				ICR_DrawText(100, 320, listArray[6]);
+				ICR_DrawText(100, 360, listArray[7]);
+				ICR_DrawText(100, 400, listArray[8]);
+				ICR_DrawText(100, 440, listArray[9]);
+				ICR_DrawText(100, 480, listArray[10]);
+
+				ICR_DrawText(395, 120, listArray[11]);
+				ICR_DrawText(395, 160, listArray[12]);
+				ICR_DrawText(395, 200, listArray[13]);
+				ICR_DrawText(395, 240, listArray[14]);
+				ICR_DrawText(395, 280, listArray[15]);
+				ICR_DrawText(395, 320, listArray[16]);
+				ICR_DrawText(395, 360, listArray[17]);
+				ICR_DrawText(395, 400, listArray[18]);
+				ICR_DrawText(395, 440, listArray[19]);
+				ICR_DrawText(395, 480, listArray[20]);
 				break;
 		case 4: //Create List
 				ICR_DrawFrame(4, 4, 592, 642, 2, cBlack);		
@@ -462,6 +578,8 @@ function PaintWindow() //This is where I put the things I want in the window (cu
 
 				local emptyList = ICR_GetLocalUserData("EMPTYLIST")
 				local newListName = ICR_GetLocalUserData("NEWLISTNAME")
+				print(newListName)
+				if(newListName == 0) { ICR_DrawFrame(240, 70, 200, 30, 3, cRed); }
 				ICR_SetText_Colour(cWhite); //Colour = white
 				local listRec = emptyList;
 				ICR_DrawText (25, 28, listRec);
@@ -506,15 +624,16 @@ function PaintWindow() //This is where I put the things I want in the window (cu
 				ICR_SetText_Colour(cBlack); //Colour = black
 				ICR_DrawText (20, 10,"List Record");
 				ICR_DrawBox(25, 30, 65, 25, cBlack);
-				if(bSelect == 500) {// If this box is selected 
-					ICR_DrawFrame(25, 30, 65, 25, 3, cGreen); // When selected draw 3px black frame
-				}
-				bLocation[500] <- {"WINDOW": 5, "LEFT": 5025, "TOP": 5030, "BOTTOM": 5055, "RIGHT": 5090 }; // Save location of box
 
 				ICR_SelectFont(fontThirty)
 				ICR_SetText_Colour(cBlack); //Colour = black
 				ICR_DrawText (100, 100,"Discount Name");
 				ICR_DrawBox(280, 100, 200, 30, cBlack);
+				if(bSelect == 500) {// If this box is selected 
+					ICR_DrawFrame(280, 100, 200, 30, 3, cGreen); // When selected draw 3px black frame
+				}
+				bLocation[500] <- {"WINDOW": 5, "LEFT": 5280, "TOP": 5100, "BOTTOM": 5130, "RIGHT": 5480 }; // Save location of box
+
 
 				ICR_DrawText (50, 150,"Percentage?");		
 				ICR_DrawBox(200, 150, 30, 30, cBlack);	
@@ -611,14 +730,10 @@ function PaintWindow() //This is where I put the things I want in the window (cu
 
 				local discToEdit = ICR_GetLocalUserData("DISC_TO_EDIT");
 				local discName = getDiscName(discToEdit);
+				if(discName == "Please Select") { ICR_DrawFrame(280, 100, 200, 30, 3, cRed); }
 
 				ICR_SetText_Colour(cWhite); //Colour = white
-				
-				if(!discToEdit) { 
-					ICR_DrawText (25, 28, "Select"); 
-				} else {
-					ICR_DrawText (25, 28, discToEdit);
-				}
+				ICR_DrawText (25, 28, discToEdit);
 				ICR_DrawText (283, 100, discName);
 
 				if(discType == "percentage") { 
@@ -777,6 +892,7 @@ function PaintWindow() //This is where I put the things I want in the window (cu
 				local emptyDisc = ICR_GetLocalUserData("EMPTY_DISC_RECORD");
 				local newDiscName = ICR_GetLocalUserData("EMPTYDISCNAME");
 				local discName = getDiscName(emptyDisc);
+				if(discName == "NEW DISCOUNT") { ICR_DrawFrame(280, 100, 200, 30, 3, cRed); }
 				ICR_SetText_Colour(cWhite); //Colour = white
 				ICR_DrawText (25, 28, emptyDisc);
 
@@ -958,6 +1074,8 @@ function OnMouseEvent(nWindowID, nEvent, nX, nY) {
 		case EVENT.UP: // Mouse released
 						DetectKeyPressed(nX, nY); // Track mouse location
 						switch(bSelect) {
+							case 3: 	ICR_SetLocalUserData("LIST_TO_EDIT", 0);
+										break;	
 							case 4: 	local emptyList = findEmptyListRecord();
 										ICR_SetLocalUserData("EMPTYLIST", emptyList);
 										getListPLUs(emptyList)
@@ -1088,6 +1206,74 @@ function OnMouseEvent(nWindowID, nEvent, nX, nY) {
 							case 230:	//confirm button
 										confirmNewPLU()
 										break;	
+
+/* 	EDIT LIST */			case 300:	local list = getListToEdit();
+										ICR_SetLocalUserData("LIST_TO_EDIT", list);
+										break;	
+							case 301:	local newPLUName = getPLUName()
+										ICR_SetLocalUserData("ITEM1", newPLUName)
+										break;	
+							case 302:	local newPLUName = getPLUName()
+										ICR_SetLocalUserData("ITEM2", newPLUName)
+										break;	
+							case 303:	local newPLUName = getPLUName()
+										ICR_SetLocalUserData("ITEM3", newPLUName)
+										break;	
+							case 304:	local newPLUName = getPLUName()
+										ICR_SetLocalUserData("ITEM4", newPLUName)
+										break;	
+							case 305:	local newPLUName = getPLUName()
+										ICR_SetLocalUserData("ITEM5", newPLUName)
+										break;	
+							case 306:	local newPLUName = getPLUName()
+										ICR_SetLocalUserData("ITEM6", newPLUName)
+										break;	
+							case 307:	local newPLUName = getPLUName()
+										ICR_SetLocalUserData("ITEM7", newPLUName)
+										break;	
+							case 308:	local newPLUName = getPLUName()
+										ICR_SetLocalUserData("ITEM8", newPLUName)
+										break;	
+							case 309:	local newPLUName = getPLUName()
+										ICR_SetLocalUserData("ITEM9", newPLUName)
+										break;
+							case 310:	local newPLUName = getPLUName()
+										ICR_SetLocalUserData("ITEM10", newPLUName)
+										break;	
+							case 311:	local newPLUName = getPLUName()
+										ICR_SetLocalUserData("ITEM11", newPLUName)
+										break;	
+							case 312:	local newPLUName = getPLUName()
+										ICR_SetLocalUserData("ITEM12", newPLUName)
+										break;	
+							case 313:	local newPLUName = getPLUName()
+										ICR_SetLocalUserData("ITEM13", newPLUName)
+										break;	
+							case 314:	local newPLUName = getPLUName()
+										ICR_SetLocalUserData("ITEM14", newPLUName)
+										break;	
+							case 315:	local newPLUName = getPLUName()
+										ICR_SetLocalUserData("ITEM15", newPLUName)
+										break;	
+							case 316:	local newPLUName = getPLUName()
+										ICR_SetLocalUserData("ITEM16", newPLUName)
+										break;	
+							case 317:	local newPLUName = getPLUName()
+										ICR_SetLocalUserData("ITEM17", newPLUName)
+										break;	
+							case 318:	local newPLUName = getPLUName()
+										ICR_SetLocalUserData("ITEM18", newPLUName)
+										break;	
+							case 319:	local newPLUName = getPLUName()
+										ICR_SetLocalUserData("ITEM19", newPLUName)
+										break;
+							case 320:	local newPLUName = getPLUName()
+										ICR_SetLocalUserData("ITEM20", newPLUName)
+										break;			
+							case 330:	//confirm button
+										confirmList()
+										break;		
+
 /* 	CREATE LIST */			case 400:	local listName = getName();
 										ICR_SetLocalUserData("NEWLISTNAME", listName);
 										break;	
@@ -1157,7 +1343,7 @@ function OnMouseEvent(nWindowID, nEvent, nX, nY) {
 										
 /* EDIT DISC */				case 500:	local discRecord = getDiscountToEdit()
 										ICR_SetLocalUserData("DISC_TO_EDIT", discRecord);
-										getDiscData()
+										if(discRecord) { getDiscData() }
 										break;
 							case 501:	toggleDiscountType();
 										break;
@@ -1760,6 +1946,103 @@ function confirmNewPLU() {
 		ICR_SetPGMData(1, record, currentPLU);
 
 		ICR_MessageBox("Product " + name, "(PLU " + record + ") has been updated", "", "SUCCESS", 0)
+	}
+}
+
+/*-------------------------------------------------------------------------------------------------------
+									EDIT LIST
+-------------------------------------------------------------------------------------------------------*/
+
+function getListToEdit() {
+	local listMax = ICR_GetPGMData(399, 10);
+	local totalLists = 0; 
+	local selectedRecord = [];
+
+	foreach (item in listMax) {
+		totalLists = item
+	}
+	
+	ICR_ListDialog_AddItem("Please Select", true)
+	for (local record = 1 ; record <= totalLists; record++) {
+		local listData = ICR_GetPGMData(399, record);
+		selectedRecord.push(record)
+		local listName = getListName(record)
+		ICR_ListDialog_AddItem(listName)
+	} 
+
+	local dResult = ICR_ListDialog("Choose list to edit")
+		if(dResult == 1) {
+		return 0;
+	} else {
+		return selectedRecord[dResult-2];
+	}
+}
+
+/*-------------------------------------------------------------------------------------------------------*/
+
+function getListItems(record) {
+	local listData = ICR_GetPGMData(10, record);
+	local recordArr = []
+	local nameArr = []
+	
+	local item1record = listData.ITEM1
+	local item2record = listData.ITEM2
+	local item3record = listData.ITEM3
+	local item4record = listData.ITEM4
+	local item5record = listData.ITEM5
+	local item6record = listData.ITEM6
+	local item7record = listData.ITEM7
+	local item8record = listData.ITEM8
+	local item9record = listData.ITEM9
+	local item10record = listData.ITEM10
+	local item11record = listData.ITEM11
+	local item12record = listData.ITEM12
+	local item13record = listData.ITEM13
+	local item14record = listData.ITEM14
+	local item15record = listData.ITEM15
+	local item16record = listData.ITEM16
+	local item17record = listData.ITEM17
+	local item18record = listData.ITEM18
+	local item19record = listData.ITEM19
+	local item20record = listData.ITEM20
+
+	recordArr.push(item1record)  
+	recordArr.push(item2record)
+	recordArr.push(item3record)
+	recordArr.push(item4record)
+	recordArr.push(item5record)
+	recordArr.push(item6record)
+	recordArr.push(item7record)
+	recordArr.push(item8record)
+	recordArr.push(item9record)
+	recordArr.push(item10record)
+	recordArr.push(item11record)
+	recordArr.push(item12record)
+	recordArr.push(item13record)
+	recordArr.push(item14record)
+	recordArr.push(item15record)
+	recordArr.push(item16record)
+	recordArr.push(item17record)
+	recordArr.push(item18record)
+	recordArr.push(item19record)
+	recordArr.push(item20record)
+
+	for (local i = 0 ; i < recordArr.len(); i++) {
+		local listRecord = recordArr[i]
+		if(listRecord != 0) {
+			local recordName = getPLUName(listRecord)
+			nameArr.push(recordName)
+		} else {
+			nameArr.push("No PLU Selected")
+		}
+	}
+	
+	for (local i = 0 ; i < nameArr.len(); i++) {
+		local dataNumber = i + 1
+		local recordToSave = "ITEM" + dataNumber + "_RECORD"
+		local recordNameToSave = "ITEM" + dataNumber
+		ICR_SetLocalUserData(recordNameToSave, nameArr[i]);
+		ICR_SetLocalUserData(recordToSave, recordArr[i]);
 	}
 }
 
