@@ -56,7 +56,7 @@ function OnInit()
 	ICR_SetLocalUserData("SIGN_ON",signOn)
 	
 	local signOff = CheckForKey( { NAME = "SIGN OFF" , FILE = STATUS_KEY, KEYTYPE = 75, MATCHNAME = true} ); //Create STS key
-	ICR_SetLocalUserData("SING_OFF",signOff)
+	ICR_SetLocalUserData("SIGN_OFF",signOff)
 
 }
 
@@ -2902,7 +2902,7 @@ function ExitApp() {
 	if(confirm) { resetData() }
 
 	local signOn = ICR_GetLocalUserData("SIGN_ON")
-	local signOff = ICR_GetLocalUserData("SING_OFF")
+	local signOff = ICR_GetLocalUserData("SIGN_OFF")
 	ICR_KeyPress(STATUS_KEY, signOff)
 	ICR_SetInput(clerkPIN)
 	ICR_KeyPress(STATUS_KEY, signOn)
