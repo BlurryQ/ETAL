@@ -1,4 +1,4 @@
-﻿local bDebugPrinting = true;	// set this false to disable all the debug printing in the output file
+﻿local bDebugPrinting = false;	// set this false to disable all the debug printing in the output file
 
 dofile("etal\\lib\\keys.moc"); // Load Keys from lib (auto crate key)
 
@@ -795,7 +795,6 @@ function PaintWindow() //This is where I put the things I want in the window (cu
 
 				local emptyList = ICR_GetLocalUserData("EMPTYLIST")
 				local newListName = ICR_GetLocalUserData("NEWLISTNAME")
-				print(newListName)
 				if(newListName == 0) { ICR_DrawFrame(240, 70, 200, 30, 3, cRed); }
 				ICR_SetText_Colour(cWhite); //Colour = white
 				local listRec = emptyList;
@@ -1961,8 +1960,25 @@ function populatePLUData(newPLU) {
 	ICR_SetLocalUserData("TAX_NAME", taxName)
 	ICR_SetLocalUserData("TAX_REC", taxRate)
 	local flag2Data = nPLU.FLAG2;
-	if(flag2Data - 4 >= 0) { ICR_SetLocalUserData("PLUPRESET_OVERRIDE", 4); }
-	if(flag2Data - 1 >= 0) { ICR_SetLocalUserData("ZEROPRICE", 1); }
+
+	if(flag2Data - 128 >= 0) { flag2Data -= 128 } //Windows stay until ESC
+	if(flag2Data - 64 >= 0) { flag2Data -= 64 } //Allow manual weight entry
+	if(flag2Data - 32 >= 0) { flag2Data -= 32 } //PLU is weight PLU
+	if(flag2Data - 16 >= 0) { flag2Data -= 16 } //Do not print on receipts or bills
+	if(flag2Data - 8 >= 0) { flag2Data -= 8 } //PLU is condiment
+	if(flag2Data - 4 >= 0) { 
+		ICR_SetLocalUserData("PLUPRESET_OVERRIDE", 4); //Enable preset override
+		flag2Data -= 4
+	} else {
+		ICR_SetLocalUserData("PLUPRESET_OVERRIDE", 0)
+	}
+	if(flag2Data - 2 >= 0) { flag2Data -= 2 } //PLU is negative
+	if(flag2Data - 1 >= 0) { 
+		ICR_SetLocalUserData("ZEROPRICE", 1); // Enable zero price sale
+		flag2Data -= 2
+	} else { 
+		ICR_SetLocalUserData("ZEROPRICE", 0) 
+	}
 
 	local listPLU1 = nPLU.LISTPLU1;
 	local list1Name = getListName(listPLU1);
@@ -2263,14 +2279,43 @@ function confirmPLU() {
 		}
 
 		currentPLU.TAXRATE = taxRate;
-		if(zeroPrice && currentPLU.FLAG2 != 0) { currentPLU.FLAG2 += zeroPrice; 
-			} else { 
-			currentPLU.FLAG2 -= 1;
+
+		local newFlag2 = 0
+		local currentFlag2 = currentPLU.FLAG2
+
+		if(currentFlag2 - 128 >= 0) { 
+			newFlag2 += 128
+			currentFlag2 -= 128
+		}
+		if(currentFlag2 - 64 >= 0) { 
+			newFlag2 += 64 
+			currentFlag2 -= 64
+		}
+		if(currentFlag2 - 32 >= 0) { 
+			newFlag2 += 32
+			currentFlag2 -= 32
+		}
+		if(currentFlag2 - 16 >= 0) { 
+			newFlag2 += 16
+			currentFlag2 -= 16
 			}
-		if(override && currentPLU.FLAG2 != 0) { currentPLU.FLAG2 += override; 
-			} else { 
-			currentPLU.FLAG2 -= 4;
-			}
+		if(currentFlag2 - 8 >= 0) { 
+			newFlag2 += 8
+			currentFlag2 -= 8
+		}
+
+		if(currentFlag2 - 4 >= 0) {	currentFlag2 -= 4 } 
+		if(override) { newFlag2 += 4 }
+
+		if(currentFlag2 - 2 >= 0) { 
+			newFlag2 += 2
+			currentFlag2 -= 2
+		}
+
+		if(currentFlag2 - 1 >= 0) {	currentFlag2 -= 1 } 
+		if(zeroPrice) { newFlag2 += 1 }		
+
+		currentPLU.FLAG2 = newFlag2
 
 		currentPLU.LISTPLU1 = list1
 		currentPLU.LISTPLU2 = list2
